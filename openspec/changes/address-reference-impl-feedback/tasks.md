@@ -56,4 +56,4 @@
 - [x] 9.1 Read README.md end-to-end for consistency: every example id, field name, and tool signature agrees with the new rules; no dangling reference to `produced-by` except the legacy note
 - [x] 9.2 Verify each spec scenario in `openspec/changes/address-reference-impl-feedback/specs/` is answered by a normative sentence in README.md
 - [x] 9.3 Update the Status section to reflect which details are now fixed and what remains open (signing, `.well-known` crawling)
-- [ ] 9.4 Commit with a message referencing #1–#10; after merge, comment on each issue with the resolving section and close it
+- [x] 9.4 Commit with a message referencing #1–#10; after merge, comment on each issue with the resolving section and close it
