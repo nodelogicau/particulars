@@ -41,8 +41,8 @@ was formed — making it portable, inspectable, and trustworthy across systems.
 ## Core Object Types
 
 The format defines three knowledge object types — particular, claim, and
-synthesis — and two record types that describe events about them: retraction
-and merge. Everything else is implementation.
+synthesis — and records that describe events about them: retraction, merge,
+and publish. Everything else is implementation.
 
 ### Identifiers
 
@@ -55,6 +55,7 @@ UUID version 7 ([RFC 9562](https://www.rfc-editor.org/rfc/rfc9562)):
 | `clm_` | claim |
 | `syn_` | synthesis |
 | `mrg_` | merge record |
+| `pub_` | promotion record |
 
 ```
 clm_01916f03-b680-71a3-974f-9401ba374e1f
@@ -69,15 +70,29 @@ The time embedded in an id is the **minting** instant. The `timestamp` field on
 an object is the **assertion** time and may be earlier — for example when
 recording a dated document. Consumers MUST NOT require the two to agree.
 
-Readers MUST accept any id matching `^(par|clm|syn|mrg)_[A-Za-z0-9-]+$`, so
+Readers MUST accept any id matching `^(par|clm|syn|mrg|pub)_[A-Za-z0-9-]+$`, so
 that workspaces written with other schemes (including earlier drafts of this
 specification) remain readable. Validators MAY warn on ids that are not
 UUIDv7.
 
+### Field order
+
+The order in which fields are shown for each type below is that type's
+**canonical order**. Writers SHOULD emit fields in it; readers MUST accept
+them in any order and MUST NOT reject a file because its fields are arranged
+differently. Fields an implementation adds beyond this specification are
+written after all specified fields, keeping their relative order among
+themselves.
+
+Canonical order is what makes a workspace reviewable as a git diff: two
+implementations that agree on it produce byte-identical files for identical
+knowledge. It is also a prerequisite for signing, which is defined over the
+canonical form — see [Trust and Provenance](#trust-and-provenance).
+
 ### Source
 
-Claims, syntheses, retractions, and merge records all carry a `source` block
-of the same shape:
+Claims, syntheses, retractions, merge records, and promotion records all
+carry a `source` block of the same shape:
 
 ```yaml
 source:
@@ -177,9 +192,14 @@ confidence: 0.9
 `context` and `context.scope` are **required on disk** for every claim and
 synthesis. `context.topics` is optional and defaults to empty. When a caller
 omits scope, the *writer* applies the workspace default (or `personal`) before
-the file is written. Readers never infer a scope: whether an object may appear
-in a public feed must be decidable from the file alone, without reference to
-workspace configuration.
+the file is written.
+
+The value in the file is the object's **asserted** scope. Because claims are
+immutable it never changes; an object is shared more widely by adding a
+[promotion record](#promotion-records), which yields its *effective* scope.
+Readers never infer a scope from configuration: eligibility for a feed is
+decided by the object file together with the promotion records, and by nothing
+else.
 
 Claims are immutable once created. Correction happens through synthesis or
 retraction, never overwriting. Retraction is recorded, not deletion —
@@ -235,10 +255,17 @@ required: every synthesis records the harness that produced it. (Earlier
 drafts used a separate `produced-by` field. Readers MAY treat a legacy
 `produced-by` block as `source` during v0.1 and SHOULD warn.)
 
+Every claim and synthesis carries exactly one `subject`, and it is always
+supplied by the caller: `synthesis_create` takes a `particular_id`, and
+implementations MUST NOT infer a synthesis's subject from its inputs.
+
 Inputs MAY have a different `subject` than the synthesis. A claim about a
 library can legitimately inform a synthesis about the project that uses it.
 Note that citing it does not count as synthesising it for the library's own
-particular — see [Conflict semantics](#conflict-semantics).
+particular — see [Conflict semantics](#conflict-semantics). This is also why
+the subject cannot be inferred: for a synthesis about project X citing a claim
+about library Y, first-input, most-common-input, and all-inputs-agree each
+give the wrong answer.
 
 The `unresolved` field is required. A synthesis that makes no acknowledgement
 of what it could not reconcile is considered malformed. When the producer
@@ -312,15 +339,66 @@ source: {author: ben, harness: claude}
 timestamp: 2026-08-21T09:30:00Z
 ```
 
-`uris` contains exactly two URIs. Merges are keyed on URIs rather than local
-ids because a merge routinely spans sources where only one side has a local
-particular.
+`uris` contains exactly two URIs, and the fields are written in the order
+shown: `id`, `type`, `uris`, `reason`, `source`, `timestamp`. Merges are keyed
+on URIs rather than local ids because a merge routinely spans sources where
+only one side has a local particular.
 
 Non-retracted merge records are **symmetric and transitive**: the particulars
 they join form an equivalence class. `knowledge_recall`, `conflict_detect`,
 and `lineage_trace`, given any member of a class, operate over the whole
 class. Claims keep their original `subject`; nothing is moved or rewritten. A
 merge is undone by retracting it, which removes only that edge.
+
+---
+
+### Promotion records
+
+Claims are immutable, so a claim's scope cannot be rewritten to share it more
+widely. `knowledge_publish` instead records the decision:
+
+```yaml
+# publishes/pub_01a0f3c1-4d20-7b8e-9a11-6c2f4e7d9b03.yaml
+id: pub_01a0f3c1-4d20-7b8e-9a11-6c2f4e7d9b03
+type: publish
+claims:
+  - clm_01916f03-b680-71a3-974f-9401ba374e1f
+  - syn_01933034-b1a0-705f-b788-2c7c58c46e29
+scope: public
+reason: Architecture history cleared for the public docs site.   # optional
+source: {author: ben, harness: claude}
+timestamp: 2026-08-22T09:30:00Z
+```
+
+`claims` lists at least one claim or synthesis id, and the fields are written
+in the order shown: `id`, `type`, `claims`, `scope`, `reason`, `source`,
+`timestamp`.
+
+An object's **effective scope** is the widest scope named by a non-retracted
+promotion record covering it, or its asserted `context.scope` when none does,
+ordering `personal` < `organisation` < `public`. Feed eligibility is computed
+from the object file together with the promotion records — never from
+`dkf.yaml`.
+
+**Promotion may only widen.** A record naming a scope narrower than an
+object's asserted scope is invalid. This fixes the direction in which the
+format fails: a consumer that ignores `/publishes/` and honours
+`context.scope` will withhold something that was in fact authorised, but it
+can never expose something that was not. If narrowing were expressible, that
+same consumer would read `public` on a file that had since been restricted and
+leak it. Narrowing is done by retracting the promotion — which is visible on
+the file a naive consumer already opens — or by retracting the object.
+
+**Promotion does not cascade.** Promoting a synthesis does not promote the
+claims it cites, so a public consumer may receive a synthesis citing input ids
+it cannot resolve. That is the intended default: cascading would silently
+widen an entire lineage, and promotion is meant to be explicit and deliberate.
+Publishers who want a traversable public chain promote the inputs too, and
+implementations SHOULD warn when a promoted synthesis has narrower inputs.
+
+A promotion is retracted like any record, after which the objects it covered
+revert to their asserted scope and leave future feeds. Retraction cannot
+recall what an external consumer already fetched; nothing in this format can.
 
 ---
 
@@ -384,12 +462,17 @@ Two consequences follow:
 - **Cross-particular inputs are per class.** A claim about Y cited by a
   synthesis about X is not thereby synthesised for Y.
 
+Merge records take part in this, because they decide which particulars share a
+class. Promotion records do not: they are not knowledge, they form no class,
+and they change no conflict set.
+
 ---
 
 ## File Layout
 
 ```
 /dkf.yaml                      workspace marker and configuration
+/.dkf                          optional pointer, when tools start elsewhere
 
 /particulars/
   par_01916f03-b680-71a2-bad4-40b49d5a5a6d.yaml
@@ -404,14 +487,17 @@ Two consequences follow:
 /merges/
   mrg_01a023a7-e1c0-70a7-9232-ad5090460a2d.yaml
 
+/publishes/
+  pub_01a0f3c1-4d20-7b8e-9a11-6c2f4e7d9b03.yaml
+
 /index.yaml                    derived cache — see below
 ```
 
 ### `dkf.yaml`
 
 A workspace is identified by a `dkf.yaml` at its root. Implementations find
-the workspace by walking up from the working directory until they encounter
-one, exactly as git finds `.git`.
+the workspace by walking up from the working directory, exactly as git finds
+`.git`.
 
 ```yaml
 format: dkf/0.1
@@ -432,6 +518,39 @@ Implementations MUST ignore unknown keys so the file can be extended.
 `scope` fills `context.scope`; `source` fields fill an incomplete `source`.
 Readers never consult `defaults` — every object file is interpretable on its
 own.
+
+#### Discovery
+
+Explicit configuration wins: a workspace argument, then an environment
+variable. Failing those, implementations walk up from the working directory
+and at each ancestor:
+
+1. a `dkf.yaml` makes that directory the workspace;
+2. otherwise a `.dkf` file redirects to the workspace it names.
+
+A `.dkf` holds a path on its first non-blank, non-comment line, resolved
+relative to the directory containing the pointer or taken as absolute:
+
+```
+repo/
+  .dkf            → "knowledge"
+  knowledge/
+    dkf.yaml
+  src/            ← a tool started here finds repo/knowledge
+```
+
+This exists because tools usually start *above* a workspace rather than
+inside one — at a repository root, in an agent session, in a checkout the
+session did not choose — and without it every verb fails until someone
+supplies a path.
+
+Pointers do not chain: the named directory MUST contain `dkf.yaml`, and a
+pointer whose target does not is an error naming both paths. A `.dkf` is not a
+workspace marker — it carries no configuration, and a workspace remains
+discoverable from inside it whether or not any pointer exists. The redirect is
+deliberately not a `dkf.yaml` with a `root:` key, because that file *is* the
+marker to every conformant reader, which would make the repository root look
+like an empty workspace.
 
 ### `index.yaml`
 
@@ -482,11 +601,17 @@ entries:
     uris:
       - https://example.com/particulars/project-x
       - urn:dkf:01916cb5-32a0-7001-90a6-6195d31a5bb6:projectx
+  - id: pub_01a0f3c1-4d20-7b8e-9a11-6c2f4e7d9b03
+    type: publish
+    scope: public
+    claims:
+      - clm_01916f03-b680-71a3-974f-9401ba374e1f
+      - syn_01933034-b1a0-705f-b788-2c7c58c46e29
 ```
 
 Baseline fields: every entry has `id` and `type`; particulars have `uri`;
 claims and syntheses have `subject`; syntheses have `inputs`; merges have
-`uris`. Entries MAY also carry `scope`, `topics`, `timestamp`, and
+`uris`; promotions have `claims` and `scope`. Entries MAY also carry `scope`, `topics`, `timestamp`, and
 `retracted: true` so that `knowledge_recall` can filter without opening files.
 Implementations MAY add further fields; consumers MUST ignore fields they do
 not understand.
@@ -520,7 +645,7 @@ areas.
 
 | Tool | Description |
 |---|---|
-| `synthesis_create(content, inputs[], unresolved, source)` | Record a synthesis the calling LLM has already reasoned. `source.harness` is required. The LLM reasons; this tool stores. |
+| `synthesis_create(particular_id, content, inputs[], unresolved, source)` | Record a synthesis the calling LLM has already reasoned. `particular_id` accepts an id, URI, label, or alias and MUST be supplied — the subject is never inferred from the inputs. `source.harness` is required. The LLM reasons; this tool stores. |
 
 ### Query Tools
 
@@ -536,7 +661,7 @@ areas.
 |---|---|
 | `feed_index(uri, topics[])` | Crawl and index an external knowledge source publishing DKF. Topics enable selective crawling. |
 | `particular_merge(uri_a, uri_b, source)` | Declare two URIs as the same particular. Writes a [merge record](#merge-records) without rewriting claims. |
-| `knowledge_publish(claim_ids[], scope)` | Promote claims from personal or organisation scope to public. Explicit and deliberate — not a default. |
+| `knowledge_publish(claim_ids[], scope, source, reason?)` | Promote claims from personal or organisation scope to public by writing a [promotion record](#promotion-records). Widening only. Explicit and deliberate — not a default. |
 
 The typical LLM reasoning loop is:
 
@@ -560,6 +685,7 @@ feeds:
   - /knowledge/claims/
   - /knowledge/syntheses/
   - /knowledge/merges/        # optional
+  - /knowledge/publishes/     # optional; lets a crawler verify effective scope
 topics:
   - distributed-systems
   - knowledge-management
@@ -579,9 +705,12 @@ feed.
 
 **Cryptographic signing** — claims may be signed with the publisher's DID.
 Signatures are optional in v0.1 but the field is reserved. The signed payload
-is the canonical object **minus** the `retracted` and `signature` fields, so a
-later retraction does not invalidate the original signature; the retraction
-carries its own `source`.
+is the object in [canonical field order](#field-order) **minus** the
+`retracted` and `signature` fields, so a later retraction does not invalidate
+the original signature; the retraction carries its own `source`. Emitting the
+canonical order is a SHOULD in general, but becomes mandatory for any object
+that is signed: without it, two implementations serialise the same claim into
+two different payloads.
 
 **Citation weight** — a synthesis that cites a claim increases that claim's
 standing in downstream reasoning, analogous to PageRank. Consensus across
@@ -592,10 +721,14 @@ it in `source.harness`, and the model in `source.model` where known. This
 enables downstream reasoning about the reliability of a synthesis chain in a
 given domain.
 
-**Scope isolation** — claims scoped `personal` or `organisation` are never
-surfaced in public feeds. Promotion to `public` is an explicit act recorded
-with a source. Scope is always present in the file itself, so the decision
-never depends on workspace configuration.
+**Scope isolation** — claims whose effective scope is `personal` or
+`organisation` are never surfaced in public feeds. Effective scope is the
+object's asserted `context.scope` widened by any [promotion
+record](#promotion-records) covering it, and promotion is an explicit act
+recorded with a source. Both halves live in committed files, so the decision
+never depends on workspace configuration — and because promotion can only
+widen, a consumer that reads the object file alone can withhold too much but
+never expose too much.
 
 ---
 
@@ -610,10 +743,10 @@ only way to change what is believed. The full reasoning chain is always
 traversable.
 
 **Minimal spec, layered implementation.** Three knowledge objects —
-particular, claim, synthesis — are the complete core, plus two records —
-retraction and merge — that are events about objects rather than knowledge.
-Entity types, ontologies, topic taxonomies, and trust hierarchies are
-implementation concerns.
+particular, claim, synthesis — are the complete core, plus records —
+retraction, merge, publish — that are events about objects rather than
+knowledge. Entity types, ontologies, topic taxonomies, and trust hierarchies
+are implementation concerns.
 
 **Backward compatibility by design.** A consumer that ignores synthesis-
 specific fields gets a valid claim. A consumer that ignores `/merges/` still
@@ -630,9 +763,12 @@ Databases are an implementation optimisation, not a requirement.
 ## Status
 
 This specification is in early draft. The object model, tool list, identifier
-format, retraction and merge representations, and the structural conflict
-semantics are stable. Field names and serialisation details for signing and
-public crawling remain subject to change before v0.1 is declared.
+format, canonical field order, the retraction, merge and promotion
+representations, and the structural conflict semantics are stable. What
+remains open before v0.1 is declared: whether the signed payload is defined
+over canonical YAML bytes or a serialisation-independent form, the
+`.well-known` crawling protocol, and registration of the `urn:dkf:`
+namespace.
 
 A reference implementation,
 [`particulars-cli`](https://github.com/nodelogicau/particulars-cli), exists
