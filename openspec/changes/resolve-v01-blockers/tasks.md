@@ -42,5 +42,5 @@
 - [x] 6.1 Read README.md end-to-end: every example in canonical field order, both changed tool signatures consistent, no remaining claim that scope is decidable from the claim file alone
 - [x] 6.2 Verify each scenario in `openspec/changes/resolve-v01-blockers/specs/` is answered by a normative sentence in README.md
 - [x] 6.3 Confirm the MODIFIED requirement headers match the existing spec headers exactly, so archiving merges rather than duplicates
-- [ ] 6.4 Commit referencing #11–#14; comment on each issue with the resolving section and close it
+- [x] 6.4 Commit referencing #11–#14; comment on each issue with the resolving section and close it
 - [ ] 6.5 Open a follow-up issue on particulars-cli for `pub_` records, effective-scope filtering in the feed and Graph export, `particular_id` on MCP `synthesis_create`, and `source` on `knowledge_publish`
