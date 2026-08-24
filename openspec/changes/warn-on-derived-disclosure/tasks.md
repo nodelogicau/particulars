@@ -10,5 +10,5 @@
 - [x] 2.1 Verify each scenario in `specs/scope-promotion/spec.md` is answered by a normative sentence in README.md
 - [x] 2.2 Confirm the MODIFIED requirement header matches the baseline exactly so archiving merges rather than duplicates
 - [x] 2.3 Commit referencing #15
-- [ ] 2.4 Comment on #15 with the resolving text and close it
+- [x] 2.4 Comment on #15 with the resolving text and close it
 - [ ] 2.5 Note on particulars-cli#2 that the spec ratified `scope_wider_than_inputs` and that the effective-scope comparison is now specified
