@@ -393,8 +393,25 @@ the file a naive consumer already opens — or by retracting the object.
 claims it cites, so a public consumer may receive a synthesis citing input ids
 it cannot resolve. That is the intended default: cascading would silently
 widen an entire lineage, and promotion is meant to be explicit and deliberate.
-Publishers who want a traversable public chain promote the inputs too, and
-implementations SHOULD warn when a promoted synthesis has narrower inputs.
+Publishers who want a traversable public chain promote the inputs too.
+
+**A synthesis may be wider than its inputs, and that is warned rather than
+forbidden.** Reconciling narrowly-scoped evidence into a conclusion that can
+be shared is a legitimate reason to synthesise, and no tool can judge whether
+the resulting prose discloses its sources — so the judgement belongs to
+whoever reviews the change. Implementations SHOULD warn when a synthesis's
+effective scope is wider than the effective scope of any input it cites, and
+report that condition as `scope_wider_than_inputs`. They must not reject the
+synthesis, and must not try to decide whether its content in fact reveals its
+inputs.
+
+The comparison is between *effective* scopes on both sides, which matters in
+both directions: an input promoted to match the synthesis is no longer a
+concern, while a synthesis promoted past inputs that were never widened is.
+For the same reason the condition belongs to workspace state rather than to
+the synthesis file — a promotion can create it, or clear it, without either
+file changing. Implementations evaluate it when a synthesis is created, when
+`knowledge_publish` promotes one, and during validation.
 
 A promotion is retracted like any record, after which the objects it covered
 revert to their asserted scope and leave future feeds. Retraction cannot
