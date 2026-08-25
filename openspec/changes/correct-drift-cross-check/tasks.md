@@ -21,5 +21,5 @@
 - [ ] 4.1 Verify each scenario in `specs/` is answered by a normative sentence in README.md
 - [ ] 4.2 Confirm the MODIFIED header matches its baseline, and that the retraction rename is applied before its modification at archive time
 - [ ] 4.3 Check no surviving reference to `document.uri` or to the supersession cross-check anywhere in README.md or the baseline specs
-- [ ] 4.4 Post the proposal on particulars-cli#3 **before** applying, and give them a chance to respond — the ordering the previous round got wrong
+- [x] 4.4 Post the proposal on particulars-cli#3 **before** applying, and give them a chance to respond — the ordering the previous round got wrong
 - [ ] 4.5 After applying, note on the issue that `ref` and the LF rule are settled, so their first mapping is written against the final shape
