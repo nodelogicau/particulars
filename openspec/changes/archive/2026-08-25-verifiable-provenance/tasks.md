@@ -34,5 +34,5 @@
 - [x] 6.1 Verify each scenario in `specs/` is answered by a normative sentence in README.md
 - [x] 6.2 Confirm both MODIFIED requirement headers still match their baselines exactly so archiving merges rather than duplicates
 - [x] 6.3 Read the Source and Retraction subsections end to end for consistency with the canonical field order and with effective scope
-- [ ] 6.4 Raise the change with the reference implementation before applying — it originates from a design review rather than reported feedback, and `validate` would gain two optional network-dependent checks
+- [x] 6.4 Raise the change with the reference implementation before applying — it originates from a design review rather than reported feedback, and `validate` would gain two optional network-dependent checks
 - [x] 6.5 Resolve the normalisation question from design.md, or record it in Status as open, before v0.1 is declared
