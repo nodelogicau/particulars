@@ -8,4 +8,4 @@
 
 - [x] 2.1 Verify each scenario is answered by a normative sentence in README.md
 - [x] 2.2 Confirm the MODIFIED header matches the baseline exactly
-- [ ] 2.3 Commit referencing #16; comment with the resolving text and close it
+- [x] 2.3 Commit referencing #16; comment with the resolving text and close it
