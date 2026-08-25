@@ -847,8 +847,18 @@ Baseline fields: every entry has `id` and `type`; particulars have `uri`;
 claims and syntheses have `subject`; syntheses have `inputs`; merges have
 `uris`; promotions have `claims` and `scope`. Entries MAY also carry `scope`, `topics`, `timestamp`, and
 `retracted: true` so that `knowledge_recall` can filter without opening files.
-Implementations MAY add further fields; consumers MUST ignore fields they do
-not understand.
+Implementations MAY add further fields, and future versions of this
+specification MAY add further entry types; consumers MUST ignore fields and
+entries they do not understand.
+
+An implementation that rebuilds the index MUST **preserve** entries whose
+`type` it does not recognise, unchanged and in their canonical order — a
+rebuild that dropped them would turn a read-compatibility gap into data loss
+in the cache, stripping (say) the promotion rows every time an older tool
+touched the workspace, with the loss surfacing only when a newer tool next
+computes effective scope from the index. For the same reason a drift check
+MUST NOT report unrecognised entry types as differences: a check must not
+fail on evidence of a newer conforming writer.
 
 Implementations are expected to provide an operation that rebuilds the index
 from the files, and a check that reports — without modifying anything —
