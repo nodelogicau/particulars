@@ -250,6 +250,7 @@ context:
     - architecture
     - distributed-systems
 timestamp: 2024-08-20T09:00:00Z
+evidential: observed        # observed | inferred | held — required
 confidence: 0.9
 ```
 
@@ -264,6 +265,58 @@ immutable it never changes; an object is shared more widely by adding a
 Readers never infer a scope from configuration: eligibility for a feed is
 decided by the object file together with the promotion records, and by nothing
 else.
+
+#### What backs a claim
+
+Every claim declares an **`evidential`**, answering what would settle it:
+
+| value | the claim is backed by |
+|---|---|
+| `observed` | someone or something looked |
+| `inferred` | reasoning from other claims |
+| `held` | nothing external; it is a position |
+
+It is **required, and there is no default.** A writer must not choose a value
+on the caller's behalf: if absence meant `observed`, the laziest path would
+produce the most authoritative-looking output, which is the failure
+`context.scope` is required on disk to prevent.
+
+Readers are lenient, as everywhere else in this format. A claim written
+before this field existed is valid, readable, and citable, and its warrant is
+reported as **`undeclared`** — which is not a fourth value, is not something
+a writer may emit, and is not a synonym for `observed`. It means the warrant
+cannot now be established. Claims are immutable, so there is no way to
+backfill one; the distinction ages out as new claims are written rather than
+being migrated, and that is the honest outcome — backfilling would mean
+inventing warrants for claims nobody can still interrogate.
+
+A note on the third value: `held` is not strictly an evidential. Languages
+that mark evidentiality grammatically mark *sources of information* —
+witnessed, reported, inferred — and none of them mark "this is my opinion",
+because a value judgement is not information-sourced. The axis here is
+therefore what *backs* a claim, and `held` is the value meaning nothing
+external does.
+
+#### Confidence
+
+`confidence` is the inverse probability that the claim is mistaken. It
+applies to `observed` claims, whose evidence may have been misread, and to
+`inferred` ones, whose reasoning may be invalid.
+
+**A `held` claim carries no confidence**, and a validator rejects one that
+does, reporting `confidence_on_held`. A position is not mistaken in the way a
+probability describes: it is not on the scale rather than scoring badly on
+it. Attaching a number to a claim nothing backs is the one place this format
+would let you assert weight without warrant — and in a format written mostly
+by agents, a fluent unsourced judgement carrying `confidence: 0.9` is the
+most plausible bad claim it will ever hold.
+
+There is deliberately no field recording strength of conviction. It is a
+different quantity, and a numeric one would launder social force into
+something that sorts and aggregates; where it matters it belongs in
+`content`, which is where this format keeps reasoning. Confidence on an
+`undeclared` claim is reported as unverified rather than rejected — every
+existing workspace has some.
 
 Claims are immutable once created. Correction happens through synthesis or
 retraction, never overwriting. Retraction is recorded, not deletion —
@@ -321,7 +374,31 @@ drafts used a separate `produced-by` field. Readers MAY treat a legacy
 
 Every claim and synthesis carries exactly one `subject`, and it is always
 supplied by the caller: `synthesis_create` takes a `particular_id`, and
-implementations MUST NOT infer a synthesis's subject from its inputs.
+implementations MUST NOT derive a synthesis's subject from its inputs.
+
+A synthesis declares no `evidential`. It is backed by argument from its
+inputs — that is what a synthesis is — so the value is implied and cannot
+vary. What does vary is `method`, which names the kind of question that was
+at issue:
+
+| `method` | the inputs |
+|---|---|
+| `reconciliation` | disagreed about a fact, and this settles it |
+| `qualification` | are each true, in different contexts |
+| `positions` | disagree in a way no evidence settles |
+
+The two are orthogonal: a synthesis is reached by argument whether the
+question was factual or evaluative. A `positions` synthesis **may** still
+take a position — Aufhebung produces a new position rather than surveying and
+declining — but it says what would move it, and `unresolved` is where it
+records that the question is not one evidence closes. Recording an evaluative
+conclusion as `reconciliation` is invalid: no factual disagreement was
+settled.
+
+Marking a claim `held` does not exempt it from reconciliation. Two conflicting
+positions are still unsynthesised and still want a synthesis — one of a
+different kind. The label changes what the work is, not whether there is
+work.
 
 Inputs MAY have a different `subject` than the synthesis. A claim about a
 library can legitimately inform a synthesis about the project that uses it.
@@ -751,7 +828,7 @@ areas.
 
 | Tool | Description |
 |---|---|
-| `claim_assert(particular_id, content, source, context, confidence, scope)` | Create a new claim. If scope is omitted the workspace default (or `personal`) is written into the file. |
+| `claim_assert(particular_id, content, evidential, source, context, confidence, scope)` | Create a new claim. `evidential` is required and has no default. If scope is omitted the workspace default (or `personal`) is written into the file. |
 | `claim_retract(claim_id, reason, source)` | Append a `retracted` block to a claim or synthesis. Never deletes — provenance is preserved. |
 
 ### Synthesis Tools
@@ -869,7 +946,9 @@ are implementation concerns.
 **Backward compatibility by design.** A consumer that ignores synthesis-
 specific fields gets a valid claim. A consumer that ignores `/merges/` still
 reads every claim correctly. A consumer that ignores the format entirely gets
-readable YAML. Adoption does not require full implementation.
+readable YAML. Reading does not require full implementation; writing a
+conformant claim does, since a claim that does not say what backs it is not
+one this format can reason over.
 
 **Files over databases.** The canonical store is a directory of YAML files
 in a git repository. Git provides version history, authorship, and diff
@@ -882,8 +961,11 @@ Databases are an implementation optimisation, not a requirement.
 
 This specification is in early draft. The object model, tool list, identifier
 format, canonical field order, the retraction, merge and promotion
-representations, and the structural conflict semantics are stable. What
-remains open before v0.1 is declared: whether the signed payload is defined
+representations, the evidential, and the structural conflict semantics are
+stable. The evidential is the last breaking change before v0.1: it was folded
+in rather than deferred, because declaring v0.1 is the invitation for a second
+implementation to appear, and breaking the format is cheap only while one
+exists. What remains open before v0.1 is declared: whether the signed payload is defined
 over canonical YAML bytes or a serialisation-independent form, what text
 normalisation a document hash is taken over — line endings and trailing
 whitespace change a hash without changing meaning — the `.well-known`
