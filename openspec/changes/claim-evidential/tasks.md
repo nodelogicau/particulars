@@ -31,6 +31,6 @@
 
 - [ ] 5.1 Verify each scenario in `specs/` is answered by a normative sentence in README.md
 - [ ] 5.2 Confirm no delta modifies a requirement that does not exist in the baseline — in particular, retraction `kind` belongs to the unapplied `verifiable-provenance` change
-- [ ] 5.3 Decide the sequencing against `verifiable-provenance`, and if that change lands first, specify that `held` excludes `kind: defect`
-- [ ] 5.4 Resolve or record the evaluative-synthesis question from design.md before applying
+- [ ] 5.3 Raise separately, not here: `kind: provenance-failure` has no referent on a claim carrying no `source.document`, whatever its evidential. It is a `retraction` constraint, unrelated to this change
+- [ ] 5.4 Settle the v0.1-versus-v0.2 question, the only one left open in design.md
 - [ ] 5.5 Raise with the reference implementation before applying — this requires a new argument on `claim assert`, a new validation error, and a rewrite of the confidence guidance in its agent skill

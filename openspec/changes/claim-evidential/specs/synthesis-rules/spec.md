@@ -12,7 +12,7 @@ A synthesis SHALL NOT declare an `evidential`. Its warrant is argument from its 
 - **THEN** validation fails, because the value is implied and cannot vary
 
 ### Requirement: `method` names the kind of resolution performed
-A synthesis SHALL carry `method` with one of three values: `reconciliation`, where the inputs disagreed about a fact and the synthesis settles it; `qualification`, where the inputs are each true in different contexts; or `positions`, where no evidence settles the disagreement and the synthesis names the positions and what would move either.
+A synthesis SHALL carry `method` with one of three values: `reconciliation`, where the inputs disagreed about a fact and the synthesis settles it; `qualification`, where the inputs are each true in different contexts; or `positions`, where no evidence settles the disagreement. A `positions` synthesis MAY reach an evaluative conclusion, and SHALL say what would move it. An evaluative conclusion SHALL NOT be recorded as `reconciliation`, which asserts that a factual disagreement was settled.
 
 #### Scenario: Settling a factual disagreement
 - **WHEN** two claims give different ports for the same service and a synthesis determines which holds
@@ -25,6 +25,14 @@ A synthesis SHALL carry `method` with one of three values: `reconciliation`, whe
 #### Scenario: A disagreement evidence cannot settle
 - **WHEN** a synthesis reconciles two `held` claims that no evidence would decide between
 - **THEN** it records `method: positions`, and its `unresolved` may state that the question is not one evidence closes
+
+#### Scenario: An evaluative conclusion
+- **WHEN** a synthesis weighs two `held` claims and concludes that one path is better
+- **THEN** it records `method: positions`, states what would change the conclusion, and is still `inferred` because it was reached by argument
+
+#### Scenario: An evaluative conclusion dressed as a settlement
+- **WHEN** a synthesis reaches an evaluative conclusion and records `method: reconciliation`
+- **THEN** validation fails, because no factual disagreement was settled
 
 #### Scenario: A held claim is not exempt from synthesis
 - **WHEN** two conflicting `held` claims are unsynthesised for a particular

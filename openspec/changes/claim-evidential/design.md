@@ -86,9 +86,25 @@ A synthesis is derived from its inputs — that is what it is — so declaring t
 
 - `reconciliation` — the inputs disagreed about a fact; this settles it.
 - `qualification` — the inputs are both true, in different contexts.
-- `positions` — no evidence settles this; the synthesis names the positions and what would move either.
+- `positions` — no evidence settles this; the synthesis may still take a position, and says what would move it.
 
 `positions` is what gives `unresolved` the vocabulary it currently lacks for "considered, and this is not the kind of question evidence closes". It also defuses the obvious worry about `held` becoming a dumping ground: marking a claim `held` does not exempt it from reconciliation. Two conflicting positions still surface as unsynthesised and still want a synthesis — one of a different kind. The label changes what the work is, not whether there is work.
+
+### D7. Evidential and method are orthogonal, and the guard belongs on method
+
+An earlier draft left open what to do with a synthesis that reconciles two positions and concludes "given both, X is the better path" — an evaluative conclusion reached by argument. The question dissolves once the two axes are stated separately:
+
+```
+  evidential  what BACKS the claim       observed / inferred / held
+  method      what KIND OF QUESTION      reconciliation / qualification
+              was at issue               / positions
+```
+
+A synthesis is backed by argument from its inputs — that is what a synthesis is — whether the question at issue was factual or evaluative. So D5 holds unchanged, and `method` carries the evaluative character.
+
+This is why `positions` is worded above to permit a conclusion rather than requiring abstention. A definition that only allowed naming the positions would forbid the move the format is named after: Aufhebung produces a new position, it does not survey and decline.
+
+It also relocates the concern that kept this open. The risk was never an evaluative conclusion being recorded as `inferred`, since everything reached by argument is. The risk is an evaluative conclusion recorded as `reconciliation` — dressed as a factual settlement — and the guard therefore belongs on `method`, not on the evidential.
 
 ## Risks / Trade-offs
 
@@ -100,7 +116,6 @@ A synthesis is derived from its inputs — that is what it is — so declaring t
 
 ## Open Questions
 
-- **The evaluative synthesis.** A synthesis that reconciles two positions and concludes "given both, X is the better path" has an evaluative conclusion reached by argument. `inferred` with `method: positions` is the intended answer, on the grounds that the synthesis reasons *about* positions rather than asserting one — but if that is wrong, it is wrong in the direction of letting judgements launder themselves as reasoning, which is what this change exists to prevent. Unsettled deliberately.
-- **May an `undeclared` claim carry confidence?** It already does, in every existing workspace. Reporting it as unverified is proposed here; forbidding it retroactively is not possible, and ignoring it entirely loses the signal.
-- **Is `held` the right name?** `judged`, `valued`, and `position` were all considered. `held` reads well against "a position someone holds" and does not imply a verdict, but it is the least standard of the three terms.
-- **v0.1 or v0.2.** Not a question this change can answer alone.
+- **v0.1 or v0.2.** The only one left, and not a question this change can answer alone. The argument governing every round so far is that breaking is cheap while one implementation exists and expensive afterwards — and declaring v0.1 is precisely the invitation for a second implementation to appear, so freezing first spends the cheapness this change depends on. Two things make it cheaper than it looks: it breaks writers only, since reader-leniency keeps every existing workspace valid and readable; and the one implementation has absorbed four rounds in five days. Against that, the implementation is fully conformant today, which is a natural freeze point. The recorded recommendation is to fold this in before declaring v0.1, rather than declaring and then breaking a week later.
+
+*Resolved since the first draft:* the evaluative synthesis, by D7. `held` as the name, because the axis is what backs a claim — which is what makes the confidence rule follow — and `judged` would suit a "how was it reached" framing that carries that argument less directly. And confidence on an `undeclared` claim, which is reported as unverified: it exists in every workspace already, forbidding it retroactively is impossible, and ignoring it loses the signal.
