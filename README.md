@@ -472,7 +472,7 @@ on:
 
 There is no fourth joint, which is why this closure should stay closed.
 
-`kind` is **declared**, never inferred. In particular it MUST NOT be derived
+`kind` is **declared**, never guessed. In particular it MUST NOT be derived
 from whether `superseded-by` is present: that field answers whether anything
 replaced the claim, which is a different question. The most common defect —
 a typo-grade misreading — is corrected by asserting the right value and
@@ -835,7 +835,7 @@ areas.
 
 | Tool | Description |
 |---|---|
-| `synthesis_create(particular_id, content, inputs[], unresolved, source)` | Record a synthesis the calling LLM has already reasoned. `particular_id` accepts an id, URI, label, or alias and MUST be supplied — the subject is never inferred from the inputs. `source.harness` is required. The LLM reasons; this tool stores. |
+| `synthesis_create(particular_id, content, inputs[], unresolved, source)` | Record a synthesis the calling LLM has already reasoned. `particular_id` accepts an id, URI, label, or alias and MUST be supplied — the subject is never derived from the inputs. `source.harness` is required. The LLM reasons; this tool stores. |
 
 ### Query Tools
 
