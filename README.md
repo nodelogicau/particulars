@@ -118,15 +118,44 @@ source:
   author: ben
   harness: claude
   document:
-    uri: https://example.com/docs/architecture.md
-    hash: sha256:9f2a…        # of the document as fetched — optional
-    quote: |                  # verbatim, optional
+    ref: docs/architecture.md   # URI, workspace path, or an unfetchable source
+    hash: sha256:9f2a…          # optional
+    quote: |                    # verbatim, optional
       The billing service listens on port 8443 behind the ingress.
 ```
 
-Both forms are valid and a bare URI is not inferior provenance. `uri` is
+Both forms are valid and a bare string is not inferior provenance. `ref` is
 required in the mapping form; `hash` and `quote` are optional, and the fields
 are written in the order shown.
+
+**`ref` identifies the source**, and holds one of three things: a URI, a path
+resolved against the workspace root, or an identifier for something that
+cannot be fetched at all — `chat session 2026-08-22`, a recollection, a page
+behind a login. Resolution is best-effort: an implementation may try a `ref`
+as a URI and as a workspace path, and where it is neither the reference is
+simply *unverifiable*. That third case is not a courtesy. An unfetchable
+source can still carry a quote, and quoting what someone said, with nothing
+to fetch and no hash, is provenance a reviewer can weigh. A field called
+`uri` could not hold it.
+
+Readers accept `uri` as a legacy alias for `ref` and should warn. The warning
+matters for a reason particular to this format rather than out of tidiness: a
+file carrying `uri` can never be rewritten, since appending a retraction is
+the only permitted modification, so readers must go on accepting it and a
+warning is the only way anyone learns it is there.
+
+**The hash** is taken over the document with CRLF sequences normalised to LF
+and *nothing else* altered — not trailing whitespace, not Unicode form, not a
+final newline. The rule is to normalise what is an artefact of the transport
+and leave every edit visible: line endings differ by platform, so hashing raw
+bytes would report drift on every claim in a workspace checked out on
+Windows, while trailing whitespace differs because somebody edited the file,
+and normalising it would blind the check to a class of real change.
+
+Writers should write `sha256`. Readers accept any `<algorithm>:<digest>` and
+report an algorithm they do not implement as unverified rather than invalid —
+otherwise two conformant implementations could be unable to check each
+other's hashes, which defeats the point of recording one.
 
 **The locator is a verbatim quote, never an offset.** Line and byte ranges
 break the moment anyone inserts text above them, which would report drift for
@@ -481,11 +510,26 @@ retracted because its subject was decommissioned is an honest supersession
 with nothing to point at.
 
 Where the retracted object cites a document that can be fetched, an
-implementation SHOULD cross-check the declaration against the drift and warn
-on disagreement — a `supersession` recorded against a document whose hash is
-unchanged is suspect, because nothing moved to supersede it. Where the source
-carries no hash or cannot be fetched, the kind stands unverified and no
-warning is due.
+implementation should report the observed drift alongside the declared kind
+as an observation, and leave the judgement to the reader.
+
+It must **not** treat an unchanged hash as evidence against a declared
+`supersession`. Drift is a signal about the *source* joint; supersession
+asserts that the *world* moved, and the format has no way to tell a document
+that describes current state from one dated by design. A claim sourced from
+an architecture decision record, an incident report, or a commit-pinned URL
+cites something that is supposed to stay byte-identical while the world moves
+on, so the check would fire on the ordinary case forever.
+
+The sound check runs the other way: a `defect` declared against a document
+that *has* drifted is **unverifiable**, because the text the claim is said to
+have misread is no longer the text a reviewer can read. That is a statement
+about what can be checked rather than a guess about intent. Checking covers
+retracted objects for this reason — the finding is about the retraction, not
+about a live claim.
+
+Where the source carries no hash or cannot be fetched, the kind stands
+unverified and no warning is due.
 
 **`superseded-by`** is an optional pointer for typo-grade corrections where a
 full thesis/antithesis synthesis would be ceremony. It MUST reference an
@@ -966,10 +1010,9 @@ stable. The evidential is the last breaking change before v0.1: it was folded
 in rather than deferred, because declaring v0.1 is the invitation for a second
 implementation to appear, and breaking the format is cheap only while one
 exists. What remains open before v0.1 is declared: whether the signed payload is defined
-over canonical YAML bytes or a serialisation-independent form, what text
-normalisation a document hash is taken over — line endings and trailing
-whitespace change a hash without changing meaning — the `.well-known`
-crawling protocol, and registration of the `urn:dkf:` namespace.
+over canonical YAML bytes or a serialisation-independent form, the
+`.well-known` crawling protocol, and registration of the `urn:dkf:`
+namespace.
 
 A reference implementation,
 [`particulars-cli`](https://github.com/nodelogicau/particulars-cli), exists

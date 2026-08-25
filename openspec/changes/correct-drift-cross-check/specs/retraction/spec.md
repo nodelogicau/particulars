@@ -22,6 +22,10 @@ Where `defect` is declared against a document that has drifted, implementations 
 - **WHEN** a retraction declares `kind: defect` and the cited document is unchanged
 - **THEN** a reviewer can compare the claim against the quoted text, and nothing is reported
 
+#### Scenario: Verification covers retracted objects
+- **WHEN** an implementation checks the documents cited in a workspace
+- **THEN** it examines objects carrying a `retracted` block as well, since the unverifiable-defect finding is about the retraction itself
+
 #### Scenario: Unverifiable source
 - **WHEN** a retraction declares a kind and its source carries no hash, or cannot be fetched
 - **THEN** the kind stands unverified and no warning is emitted
