@@ -108,6 +108,70 @@ is a valid source (`{harness, model}`); a person working without an assistant
 is a valid source (`{author}`). A `source` with neither is malformed.
 Syntheses additionally require `source.harness` — see below.
 
+#### Verifiable documents
+
+`document` may be a bare URI, as above, or a mapping that makes the claim
+checkable:
+
+```yaml
+source:
+  author: ben
+  harness: claude
+  document:
+    uri: https://example.com/docs/architecture.md
+    hash: sha256:9f2a…        # of the document as fetched — optional
+    quote: |                  # verbatim, optional
+      The billing service listens on port 8443 behind the ingress.
+```
+
+Both forms are valid and a bare URI is not inferior provenance. `uri` is
+required in the mapping form; `hash` and `quote` are optional, and the fields
+are written in the order shown.
+
+**The locator is a verbatim quote, never an offset.** Line and byte ranges
+break the moment anyone inserts text above them, which would report drift for
+edits that touched nothing relevant — and a check that cries wolf is a check
+reviewers learn to skip. A quote is content-addressed, so it survives
+insertion and reformatting, and it does something no offset can: it lets a
+reviewer audit the claim against its source while reading the pull request,
+with no tooling and no network.
+
+#### Drift
+
+A structured reference can be checked later, and two signals matter rather
+than one: whether the quote still appears in the document, and whether the
+document still hashes the same.
+
+| quote | document hash | meaning |
+|---|---|---|
+| present | matches | nothing moved; the claim rests where it was |
+| present | differs | **context drift** — the text around the quote changed |
+| absent | differs | **quote drift** — the cited text is gone or altered |
+
+The middle row is why hashing the quote alone is not enough. A document
+reading "In staging, the billing service listens on 443" yields the claim
+"the billing service listens on 443"; changing *staging* to *production*
+falsifies the claim without touching a character of the quote. Hashing only
+the document catches it, at the cost of flagging every unrelated typo — so
+recording both is what separates "something moved near my claim" from
+"something moved somewhere in this file".
+
+Drift is a condition for a reader to resolve, never a validation failure. A
+claim whose source has drifted stays valid, readable, and citable.
+
+**Verification is best-effort.** Nothing obliges a consumer to fetch
+anything. A source that cannot be fetched, hashed, or quoted — a
+conversation, a recollection, a page behind a login — is a legitimate source,
+and such provenance is reported as *unverified* rather than absent or
+invalid. A validator running offline reports references as not checked and
+does not fail.
+
+**A quote carries source text.** It reproduces the source verbatim inside the
+claim file, so the claim's effective scope governs the exposure of that text.
+Implementations SHOULD warn when a claim's effective scope is wider than the
+material it quotes, where that is known. Unlike a synthesis, which summarises
+its inputs, a quote discloses its source completely.
+
 ---
 
 ### `DPARTICULAR`
@@ -297,7 +361,8 @@ retracted:
   timestamp: 2026-08-21T09:12:00Z
   reason: "Port is 8443, not 443 — deploy/config.yaml:12"
   source: {author: ben}
-  superseded-by: clm_01a02396-7ca0-718d-9a6e-86fd10508af1   # optional
+  kind: defect                                             # optional
+  superseded-by: clm_01a02396-7ca0-718d-9a6e-86fd10508af1  # optional
 ```
 
 Rules:
@@ -313,6 +378,37 @@ The marker lives on the file rather than in a separate object because the
 consumer most likely to misuse a retracted claim is one that opens only that
 claim's file. A reader that ignores the format entirely still sees the
 retraction beneath the claim.
+
+**`kind`** is optional and records *why* the claim died. It has three values,
+which are not a taxonomy but the three joints in the chain the claim depends
+on:
+
+```
+   claim ─────────▶ source ─────────▶ world
+     │                 │                │
+     ▼                 ▼                ▼
+ misreads what    the source        the world
+ the source says  was wrong         moved on
+     │                 │                │
+  defect      provenance-failure   supersession
+```
+
+There is no fourth joint, which is why this closure should stay closed.
+
+`kind` is **declared**, never inferred. In particular it MUST NOT be derived
+from whether `superseded-by` is present: that field answers whether anything
+replaced the claim, which is a different question. The most common defect —
+a typo-grade misreading — is corrected by asserting the right value and
+pointing at it, so defects routinely carry a replacement; and a claim
+retracted because its subject was decommissioned is an honest supersession
+with nothing to point at.
+
+Where the retracted object cites a document that can be fetched, an
+implementation SHOULD cross-check the declaration against the drift and warn
+on disagreement — a `supersession` recorded against a document whose hash is
+unchanged is suspect, because nothing moved to supersede it. Where the source
+carries no hash or cannot be fetched, the kind stands unverified and no
+warning is due.
 
 **`superseded-by`** is an optional pointer for typo-grade corrections where a
 full thesis/antithesis synthesis would be ceremony. It MUST reference an
@@ -734,9 +830,14 @@ standing in downstream reasoning, analogous to PageRank. Consensus across
 independent syntheses is a stronger signal than source confidence alone.
 
 **Harness attribution** — every synthesis records the harness that produced
-it in `source.harness`, and the model in `source.model` where known. This
-enables downstream reasoning about the reliability of a synthesis chain in a
-given domain.
+it in `source.harness`, and the model in `source.model` where known. The
+observation this is assessed from is the retraction `kind`: a `defect` counts
+against the process that produced the claim, a `supersession` counts against
+nothing, and a `provenance-failure` counts against the cited document — which
+also makes the other claims citing that document identifiable as candidates
+for review. Recording who produced a claim is only half of it; without a
+record of whether they produced it correctly there is nothing to reason
+over.
 
 **Scope isolation** — claims whose effective scope is `personal` or
 `organisation` are never surfaced in public feeds. Effective scope is the
@@ -783,9 +884,10 @@ This specification is in early draft. The object model, tool list, identifier
 format, canonical field order, the retraction, merge and promotion
 representations, and the structural conflict semantics are stable. What
 remains open before v0.1 is declared: whether the signed payload is defined
-over canonical YAML bytes or a serialisation-independent form, the
-`.well-known` crawling protocol, and registration of the `urn:dkf:`
-namespace.
+over canonical YAML bytes or a serialisation-independent form, what text
+normalisation a document hash is taken over — line endings and trailing
+whitespace change a hash without changing meaning — the `.well-known`
+crawling protocol, and registration of the `urn:dkf:` namespace.
 
 A reference implementation,
 [`particulars-cli`](https://github.com/nodelogicau/particulars-cli), exists
