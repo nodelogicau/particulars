@@ -13,4 +13,4 @@
 
 - [x] 3.1 Verify each scenario is answered by a normative sentence in README.md
 - [x] 3.2 Confirm the MODIFIED header matches the baseline exactly
-- [ ] 3.3 Await response on particulars-cli#4, then apply, archive, and close #4
+- [x] 3.3 Applied, archived, and closed particulars-cli#4 on the ack
