@@ -20,6 +20,6 @@
 
 ## 5. Review and close out
 
-- [ ] 5.1 Post the proposal on a particulars-cli issue for review before applying
+- [x] 5.1 Post the proposal on a particulars-cli issue for review before applying
 - [ ] 5.2 After review, apply; verify each scenario against README; confirm MODIFIED headers match baselines
 - [ ] 5.3 Archive; capture in the knowledge workspace that the blockers are cleared
