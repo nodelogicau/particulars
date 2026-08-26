@@ -86,8 +86,10 @@ themselves.
 
 Canonical order is what makes a workspace reviewable as a git diff: two
 implementations that agree on it produce byte-identical files for identical
-knowledge. It is also a prerequisite for signing, which is defined over the
-canonical form — see [Trust and Provenance](#trust-and-provenance).
+knowledge. That is its whole justification — the [document
+hash](#verifiable-documents) covers bytes, but the reserved signature never
+did; it is defined over the data model, where file layout is invisible. See
+[Trust and Provenance](#trust-and-provenance).
 
 ### Source
 
@@ -247,9 +249,13 @@ single `-`, and trim leading and trailing `-`. `Café Société` becomes
 that slug identically resolve to the same particular — which is what stops an
 agent re-inventing a subject under a slightly different name each session.
 
-This specification claims the `urn:dkf:` namespace for this purpose. Formal
-registration of the NID is deferred; publishers are encouraged to configure a
-`base-uri` instead, and a merge record can later join a URN to a public URI.
+This specification claims the `urn:dkf:` namespace for this purpose, and at
+v0.1 it is **deliberately unregistered**. The NID syntax conforms to
+RFC 8141, every minted URN embeds the workspace UUID — so colliding with any
+other use of the NID requires colliding a UUID — and formal registration,
+which would change no identifier, may be pursued after v0.1. Publishers are
+encouraged to configure a `base-uri` instead, and a merge record can later
+join a URN to a public URI.
 
 A particular's `uri` may change only while the particular has never been
 published. After publication, the only way to join two URIs is a
@@ -942,23 +948,55 @@ publisher:
   label: Example Organisation
 ```
 
-Crawlers discover feeds via this manifest. The `topics` field enables targeted
-crawling — a reasoning task scoped to a domain only fetches sources that
-declare relevance. Scope must be `public` for a claim to appear in a public
-feed.
+`format`, `index`, and `feeds` are required; `topics` and `publisher` are
+optional; unknown keys are ignored, as everywhere else in this format. Paths
+resolve against the site root. Every published object is fetchable at a feed
+path plus `<id>.yaml`, the index enumerates every published object, and a
+remote consumer treats the index as potentially lagging the files.
+
+A feed serves only objects whose **effective scope is `public`**. Serving the
+promotions feed lets a consumer verify that filtering for itself; a publisher
+that omits it asks to be trusted on it. An authenticated private surface — an
+organisation's search index, an exporter behind a tenant login — is not a
+feed and is not bound by this contract, which governs publishing to the open
+internet.
+
+The `topics` field enables targeted crawling — a reasoning task scoped to a
+domain only fetches sources that declare relevance. Beyond that, this
+specification deliberately defines no crawl protocol: fetch scheduling,
+change detection, and politeness are properties of consumers, not of the
+format. The publishing contract above is the whole contract, and index
+`timestamp` fields already give incremental fetching what it needs — the
+model that served `.ics` and RSS, which specified the artefact and left the
+fetching to HTTP.
 
 ---
 
 ## Trust and Provenance
 
 **Cryptographic signing** — claims may be signed with the publisher's DID.
-Signatures are optional in v0.1 but the field is reserved. The signed payload
-is the object in [canonical field order](#field-order) **minus** the
-`retracted` and `signature` fields, so a later retraction does not invalidate
-the original signature; the retraction carries its own `source`. Emitting the
-canonical order is a SHOULD in general, but becomes mandatory for any object
-that is signed: without it, two implementations serialise the same claim into
-two different payloads.
+Signatures are optional in v0.1 but the field is reserved, and the payload it
+would cover is defined: the object parsed to its data model with `retracted`
+and `signature` removed, canonicalised per
+[RFC 8785](https://www.rfc-editor.org/rfc/rfc8785) (JSON Canonicalization
+Scheme). Not the file bytes — so a signature survives reformatting, field
+reordering, and the later appending of a retraction, none of which change
+what was asserted, and `confidence: 0.9` and `0.90` sign identically for the
+same reason CRLF and LF hash identically: normalise the artefact, sign the
+assertion.
+
+The payload is built from the parsed, *typed* data model, never from a
+generic YAML-to-JSON conversion — a YAML 1.2 parser returns an unquoted
+timestamp as a native time value, and only the typed model formats it back to
+the string this format requires. In the data model, keys are strings; values
+are strings, numbers, booleans, arrays, and mappings; every field this
+specification defines as textual — timestamps, ids, references — is a string;
+`confidence` is a number. Aliases are resolved before the data model exists
+and never affect the payload; object files must not use YAML anchors and
+aliases at all, as a file-format safety rule — alias expansion is a
+resource-exhaustion vector — and validators should reject files carrying
+them. Signature *suites* — algorithms, key formats, DID binding — remain
+reserved: v0.1 defines only what the bytes would be.
 
 **Citation weight** — a synthesis that cites a claim increases that claim's
 standing in downstream reasoning, analogous to PageRank. Consensus across
@@ -1037,13 +1075,14 @@ Databases are an implementation optimisation, not a requirement.
 This specification is in early draft. The object model, tool list, identifier
 format, canonical field order, the retraction, merge and promotion
 representations, the evidential, and the structural conflict semantics are
-stable. The evidential is the last breaking change before v0.1: it was folded
-in rather than deferred, because declaring v0.1 is the invitation for a second
-implementation to appear, and breaking the format is cheap only while one
-exists. What remains open before v0.1 is declared: whether the signed payload is defined
-over canonical YAML bytes or a serialisation-independent form, the
-`.well-known` crawling protocol, and registration of the `urn:dkf:`
-namespace.
+stable, as are the signed payload's definition, the public discovery
+contract, and the namespace position. The evidential was the last breaking
+change before v0.1, folded in rather than deferred because declaring v0.1 is
+the invitation for a second implementation to appear, and breaking the format
+is cheap only while one exists.
+
+**Nothing remains open before v0.1 is declared.** Declaring it is a
+deliberate act, not a side effect of the last change landing.
 
 A reference implementation,
 [`particulars-cli`](https://github.com/nodelogicau/particulars-cli), exists

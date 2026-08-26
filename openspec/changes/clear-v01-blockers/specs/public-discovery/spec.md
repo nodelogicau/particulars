@@ -29,6 +29,10 @@ A feed SHALL serve only objects whose effective scope is `public`. Serving the p
 - **WHEN** a claim asserted `personal` is covered by a non-retracted promotion to `public`
 - **THEN** it appears in the feed
 
+#### Scenario: A private export is not a feed
+- **WHEN** an implementation serves organisation-scope knowledge to an authenticated surface, such as a tenant search index
+- **THEN** that surface is not bound by this contract, which governs publishing to the open internet
+
 #### Scenario: A narrow claim is not
 - **WHEN** an object's effective scope is `organisation`
 - **THEN** it appears in no feed, whatever the index says
