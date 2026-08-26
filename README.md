@@ -332,8 +332,12 @@ external does.
 applies to `observed` claims, whose evidence may have been misread, and to
 `inferred` ones, whose reasoning may be invalid.
 
-**A `held` claim carries no confidence**, and a validator rejects one that
-does, reporting `confidence_on_held`. A position is not mistaken in the way a
+**A `held` claim carries no confidence.** Writers refuse to create one;
+validators fail validation on one, reporting `confidence_on_held`; and
+readers still read the file — it cannot be corrected, so a reader that
+rejected it would strand it permanently. It is the first rule where the
+write-side and read-side verbs genuinely differ, which is why all three are
+named. A position is not mistaken in the way a
 probability describes: it is not on the scale rather than scoring badly on
 it. Attaching a number to a claim nothing backs is the one place this format
 would let you assert weight without warrant — and in a format written mostly
@@ -882,7 +886,7 @@ areas.
 
 | Tool | Description |
 |---|---|
-| `claim_assert(particular_id, content, evidential, source, context, confidence, scope)` | Create a new claim. `evidential` is required and has no default. If scope is omitted the workspace default (or `personal`) is written into the file. |
+| `claim_assert(particular_id, content, evidential, source, context, confidence, scope)` | Create a new claim. `evidential` is required and has no default; `held` with a `confidence` is refused. If scope is omitted the workspace default (or `personal`) is written into the file. |
 | `claim_retract(claim_id, reason, source)` | Append a `retracted` block to a claim or synthesis. Never deletes — provenance is preserved. |
 
 ### Synthesis Tools
@@ -978,6 +982,23 @@ recorded with a source. Both halves live in committed files, so the decision
 never depends on workspace configuration — and because promotion can only
 widen, a consumer that reads the object file alone can withhold too much but
 never expose too much.
+
+**Findings and facts** — a reportable condition is one of two kinds, and the
+distinction governs how it is reported. A *finding about an object* is
+something someone might act on at that object — drift on a claim's source, a
+synthesis wider than its inputs, an unverifiable defect, a dangling
+reference — and is reported per object, because the object is the unit of
+action. A *fact about the corpus* carries no per-object action — an
+`undeclared` evidential, a legacy compatibility marker, a document that
+cannot be verified — and is reported in aggregate: its discovery value is
+spent the first time it is seen, its cost recurs on every run, and it can
+never be cleared, because clearing it would mean rewriting an immutable
+file. An aggregate line carries a count always, and the condition's message
+only when it is identical across the group — attributing one object's reason
+to ninety-five is misreporting. The format's design leans on warnings being
+read, so their legibility is load-bearing rather than cosmetic; a validator
+whose output is dominated by permanent unactionable lines has spent
+`scope_wider_than_inputs` and both drift states along with them.
 
 ---
 
