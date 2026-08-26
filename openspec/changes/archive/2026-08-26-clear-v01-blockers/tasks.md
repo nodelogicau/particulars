@@ -22,4 +22,4 @@
 
 - [x] 5.1 Post the proposal on a particulars-cli issue for review before applying
 - [x] 5.2 After review, apply; verify each scenario against README; confirm MODIFIED headers match baselines
-- [ ] 5.3 Archive; capture in the knowledge workspace that the blockers are cleared
+- [x] 5.3 Archived, closed particulars-cli#5, captured in the knowledge workspace
