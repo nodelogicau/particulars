@@ -52,11 +52,19 @@ The specification SHALL define `confidence` as the inverse probability that the 
 - **THEN** it may do so only across claims whose evidential admits confidence
 
 ### Requirement: A held claim carries no confidence
-A claim declaring `evidential: held` SHALL NOT carry `confidence`. Validators SHALL reject such a claim and SHOULD report the condition as `confidence_on_held`. Implementations SHALL NOT offer a separate field recording strength of conviction.
+A claim declaring `evidential: held` SHALL NOT carry `confidence`. Writers SHALL refuse to create such a claim. Validators SHALL fail validation on one, reporting the condition as `confidence_on_held`. Readers SHALL NOT refuse to read the file: it cannot be corrected, so a reader that rejected it would strand it permanently. Implementations SHALL NOT offer a separate field recording strength of conviction.
 
 #### Scenario: Confidence on a position
 - **WHEN** a claim declares `held` and carries `confidence: 0.9`
 - **THEN** validation fails, reporting `confidence_on_held`
+
+#### Scenario: Refused at write time
+- **WHEN** `claim_assert` is called with `evidential: held` and a `confidence`
+- **THEN** the call is refused and no file is written
+
+#### Scenario: An existing offending file is still read
+- **WHEN** a workspace contains a `held` claim carrying `confidence`, written before writers refused it
+- **THEN** the claim is read and citable, and validation reports `confidence_on_held`
 
 #### Scenario: A position without confidence
 - **WHEN** a claim declares `held` and omits `confidence`
