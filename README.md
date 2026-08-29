@@ -3,6 +3,9 @@
 An open format for portable, interoperable knowledge — designed to work across
 AI harnesses, applications, and the public internet.
 
+**[particulars.fyi](https://particulars.fyi)** — a visual introduction for
+practitioners.
+
 ---
 
 ## The Problem
