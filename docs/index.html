@@ -10,13 +10,16 @@
   The proof graph in section 4 is a static rendering of real output from:
     particulars export - -format mermaid - -subject "Dialectical Knowledge Format" - -depth 1
   (remove the spaces in the flags; written this way so this comment can't be
-  mistaken for the command) run against the particulars-knowledge workspace.
-  Object ids are omitted for readability; nodes keep their type, role, and an
-  excerpt. One unsynthesised claim from that export is shown only as the dashed
-  "awaiting reconciliation" box, because its content names a competitor and the
-  page names none. When regenerating: re-run the export, redraw the nodes/edges
-  to match, verify every included node is organisation- or public-scoped, and
-  update the generation date in the section 4 caption.
+  mistaken for the command) with - -scope organisation and no depth limit, run
+  against the particulars-knowledge workspace. Rendering choices: object ids
+  are omitted; the seven syntheses keep verbatim content excerpts; each
+  generation's input claims are drawn as a counted cluster of squares rather
+  than content boxes; the subject particular is added at the root (the export
+  does not emit it); and the one unsynthesised claim is shown only as the
+  dashed "awaiting reconciliation" box, because its content names a competitor
+  and the page names none. When regenerating: re-run the export, update the
+  spine, cluster counts, and totals in the lead paragraph to match, and update
+  the generation date in the section 4 caption.
 -->
 <style>
   :root {
@@ -89,6 +92,9 @@
   svg.min600 { min-width: 600px; }
   svg.min720 { min-width: 720px; }
   svg .box-unsyn { fill: none; stroke: var(--challenge); stroke-width: 1.5; stroke-dasharray: 4 3; }
+  svg .box-par { fill: var(--card); stroke: var(--fg); stroke-width: 2; }
+  svg .clm { fill: var(--card); stroke: var(--muted); stroke-width: 1; }
+  svg .edge-dot { stroke: var(--muted); stroke-width: 1.5; fill: none; stroke-dasharray: 2 4; }
   figcaption { font-size: 0.9rem; color: var(--muted); text-align: center; margin-top: 0.75rem; }
 
   /* diagram vocabulary */
@@ -344,72 +350,127 @@
   <section id="proof">
     <div class="wrap">
       <h2>Dogfooded into existence</h2>
-      <p class="lead">This isn&rsquo;t a mock-up. The graph below is real tool output from
-        the workspace this format was designed in &mdash; where the current belief
-        records the launch of this very site.</p>
+      <p class="lead">This isn&rsquo;t a mock-up. Below is the shareable knowledge in the
+        workspace this format was designed in, at full depth: seven generations of
+        synthesis over nine days, 46 claims reconciled &mdash; ending in a current
+        belief that records the launch of this very site.</p>
 
       <figure>
         <div class="diagram-wrap">
-        <svg class="min720" viewBox="0 0 920 442" role="img" aria-labelledby="proof-title proof-desc">
-          <title id="proof-title">The workspace&rsquo;s current belief: the launch of this site</title>
-          <desc id="proof-desc">Four inputs feed the current synthesis. Three as
-            theses: the prior synthesis that DKF v0.1 is declared, a claim that the
-            declaration was published as a GitHub release, and a claim that
-            particulars.fyi went live on 29 August 2026. One claim qualifies: the
-            page positions by category and names no competitor. The resulting
-            current belief: the declared format now has a public face. One further
-            claim sits unsynthesised, awaiting its synthesis.</desc>
+        <svg class="min600" viewBox="0 0 760 1100" role="img" aria-labelledby="proof-title proof-desc">
+          <title id="proof-title">The workspace&rsquo;s full dialectic, at organisation scope</title>
+          <desc id="proof-desc">A vertical chain of seven syntheses, oldest at the
+            bottom, each citing its predecessor as thesis and each reconciling a
+            cluster of claims: ten claims into the first (the draft has absorbed
+            all ten pieces of feedback), four into scope-by-derivation, seventeen
+            into the three-further-rounds belief, five into all-18-items-absorbed,
+            seven into the blockers-cleared belief, one into the v0.1 declaration,
+            and three into the current belief: the declared format now has a
+            public face, with particulars.fyi live on 29 August 2026. At the root
+            sits the particular they are all about — the Dialectical Knowledge
+            Format. One claim remains unsynthesised, awaiting reconciliation.</desc>
           <defs>
             <marker id="ah4" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
               <path d="M0,0 L10,5 L0,10 z" class="head"/>
             </marker>
           </defs>
 
-          <rect x="280" y="30" width="360" height="104" rx="14" class="box-accent"/>
-          <text x="302" y="58" class="accent-t small">synthesis &middot; CURRENT</text>
-          <text x="302" y="80" class="small">&ldquo;The declared format now has a</text>
-          <text x="302" y="98" class="small">public face: release 2026-08-26,</text>
-          <text x="302" y="116" class="small">particulars.fyi live 2026-08-29.&rdquo;</text>
+          <!-- current belief -->
+          <rect x="320" y="40" width="330" height="104" rx="14" class="box-accent"/>
+          <text x="342" y="68" class="accent-t small">synthesis &middot; CURRENT</text>
+          <text x="342" y="90" class="small">&ldquo;The declared format now has a</text>
+          <text x="342" y="108" class="small">public face: release 2026-08-26,</text>
+          <text x="342" y="126" class="small">particulars.fyi live 2026-08-29.&rdquo;</text>
+          <rect x="172" y="80" width="12" height="12" class="clm"/><rect x="190" y="80" width="12" height="12" class="clm"/><rect x="208" y="80" width="12" height="12" class="clm"/>
+          <text x="196" y="112" text-anchor="middle" class="lbl">3 claims cited</text>
+          <path d="M232,92 L315,92" class="edge" marker-end="url(#ah4)"/>
 
-          <path d="M120,250 C120,200 250,165 320,142" class="edge" marker-end="url(#ah4)"/>
-          <text x="185" y="192" class="lbl">thesis</text>
-          <path d="M350,250 C350,205 385,175 405,142" class="edge" marker-end="url(#ah4)"/>
-          <text x="368" y="200" class="lbl">thesis</text>
-          <path d="M580,250 C580,205 545,175 520,142" class="edge" marker-end="url(#ah4)"/>
-          <text x="556" y="200" class="lbl">thesis</text>
-          <path d="M810,250 C810,200 680,165 605,142" class="edge" marker-end="url(#ah4)"/>
-          <text x="712" y="192" class="lbl">qualifying</text>
+          <rect x="40" y="140" width="250" height="48" rx="8" class="box-unsyn"/>
+          <text x="165" y="160" text-anchor="middle" class="lbl">&hellip;plus 1 claim unsynthesised,</text>
+          <text x="165" y="178" text-anchor="middle" class="lbl">awaiting reconciliation</text>
 
-          <rect x="15" y="250" width="210" height="96" rx="14" class="box"/>
-          <text x="35" y="278" class="lbl">synthesis</text>
-          <text x="35" y="300" class="small">&ldquo;DKF v0.1 is declared:</text>
-          <text x="35" y="318" class="small">tag v0.1 &middot; 2026-08-26.&rdquo;</text>
+          <!-- v0.1 declared -->
+          <path d="M485,204 L485,150" class="edge" marker-end="url(#ah4)"/>
+          <text x="500" y="182" class="lbl">thesis</text>
+          <rect x="330" y="204" width="310" height="76" rx="14" class="box"/>
+          <text x="350" y="228" class="lbl">synthesis</text>
+          <text x="350" y="250" class="small">&ldquo;DKF v0.1 is declared: tag v0.1</text>
+          <text x="350" y="268" class="small">(db55fbf), 2026-08-26&hellip;&rdquo;</text>
+          <rect x="208" y="236" width="12" height="12" class="clm"/>
+          <text x="196" y="268" text-anchor="middle" class="lbl">1 claim cited</text>
+          <path d="M232,242 L325,242" class="edge" marker-end="url(#ah4)"/>
 
-          <rect x="245" y="250" width="210" height="96" rx="6" class="box"/>
-          <text x="265" y="278" class="lbl">claim</text>
-          <text x="265" y="300" class="small">&ldquo;The declaration was</text>
-          <text x="265" y="318" class="small">published as GitHub</text>
-          <text x="265" y="336" class="small">release &lsquo;DKF v0.1&rsquo;.&rdquo;</text>
+          <!-- blockers cleared -->
+          <path d="M485,340 L485,286" class="edge" marker-end="url(#ah4)"/>
+          <text x="500" y="318" class="lbl">thesis</text>
+          <rect x="330" y="340" width="310" height="76" rx="14" class="box"/>
+          <text x="350" y="364" class="lbl">synthesis</text>
+          <text x="350" y="386" class="small">&ldquo;The previous belief committed its</text>
+          <text x="350" y="404" class="small">next update to be the declaration&hellip;&rdquo;</text>
+          <rect x="118" y="360" width="12" height="12" class="clm"/><rect x="136" y="360" width="12" height="12" class="clm"/><rect x="154" y="360" width="12" height="12" class="clm"/><rect x="172" y="360" width="12" height="12" class="clm"/><rect x="190" y="360" width="12" height="12" class="clm"/><rect x="208" y="360" width="12" height="12" class="clm"/>
+          <rect x="208" y="378" width="12" height="12" class="clm"/>
+          <text x="166" y="410" text-anchor="middle" class="lbl">7 claims cited</text>
+          <path d="M232,378 L325,378" class="edge" marker-end="url(#ah4)"/>
 
-          <rect x="475" y="250" width="210" height="96" rx="6" class="box"/>
-          <text x="495" y="278" class="lbl">claim</text>
-          <text x="495" y="300" class="small">&ldquo;particulars.fyi went live</text>
-          <text x="495" y="318" class="small">2026-08-29, single page,</text>
-          <text x="495" y="336" class="small">HTTPS enforced.&rdquo;</text>
+          <!-- all 18 items absorbed -->
+          <path d="M485,476 L485,422" class="edge" marker-end="url(#ah4)"/>
+          <text x="500" y="454" class="lbl">thesis</text>
+          <rect x="330" y="476" width="310" height="76" rx="14" class="box"/>
+          <text x="350" y="500" class="lbl">synthesis</text>
+          <text x="350" y="522" class="small">&ldquo;As of 2026-08-26 the DKF draft has</text>
+          <text x="350" y="540" class="small">absorbed all 18 feedback items&hellip;&rdquo;</text>
+          <rect x="136" y="506" width="12" height="12" class="clm"/><rect x="154" y="506" width="12" height="12" class="clm"/><rect x="172" y="506" width="12" height="12" class="clm"/><rect x="190" y="506" width="12" height="12" class="clm"/><rect x="208" y="506" width="12" height="12" class="clm"/>
+          <text x="172" y="538" text-anchor="middle" class="lbl">5 claims cited</text>
+          <path d="M232,514 L325,514" class="edge" marker-end="url(#ah4)"/>
 
-          <rect x="705" y="250" width="210" height="96" rx="6" class="box"/>
-          <text x="725" y="278" class="lbl">claim &middot; qualifying</text>
-          <text x="725" y="300" class="small">&ldquo;The page positions by</text>
-          <text x="725" y="318" class="small">category and names</text>
-          <text x="725" y="336" class="small">no competitor.&rdquo;</text>
+          <!-- three further rounds -->
+          <path d="M485,612 L485,558" class="edge" marker-end="url(#ah4)"/>
+          <text x="500" y="590" class="lbl">thesis</text>
+          <rect x="330" y="612" width="310" height="76" rx="14" class="box"/>
+          <text x="350" y="636" class="lbl">synthesis</text>
+          <text x="350" y="658" class="small">&ldquo;As of 2026-08-26 the DKF draft has</text>
+          <text x="350" y="676" class="small">taken three further rounds&hellip;&rdquo;</text>
+          <rect x="118" y="624" width="12" height="12" class="clm"/><rect x="136" y="624" width="12" height="12" class="clm"/><rect x="154" y="624" width="12" height="12" class="clm"/><rect x="172" y="624" width="12" height="12" class="clm"/><rect x="190" y="624" width="12" height="12" class="clm"/><rect x="208" y="624" width="12" height="12" class="clm"/>
+          <rect x="118" y="642" width="12" height="12" class="clm"/><rect x="136" y="642" width="12" height="12" class="clm"/><rect x="154" y="642" width="12" height="12" class="clm"/><rect x="172" y="642" width="12" height="12" class="clm"/><rect x="190" y="642" width="12" height="12" class="clm"/><rect x="208" y="642" width="12" height="12" class="clm"/>
+          <rect x="136" y="660" width="12" height="12" class="clm"/><rect x="154" y="660" width="12" height="12" class="clm"/><rect x="172" y="660" width="12" height="12" class="clm"/><rect x="190" y="660" width="12" height="12" class="clm"/><rect x="208" y="660" width="12" height="12" class="clm"/>
+          <text x="166" y="692" text-anchor="middle" class="lbl">17 claims cited</text>
+          <path d="M232,650 L325,650" class="edge" marker-end="url(#ah4)"/>
 
-          <rect x="250" y="386" width="420" height="34" rx="8" class="box-unsyn"/>
-          <text x="460" y="408" text-anchor="middle" class="lbl">&hellip;plus one claim still unsynthesised, awaiting reconciliation</text>
+          <!-- scope by derivation -->
+          <path d="M485,748 L485,694" class="edge" marker-end="url(#ah4)"/>
+          <text x="500" y="726" class="lbl">thesis</text>
+          <rect x="330" y="748" width="310" height="76" rx="14" class="box"/>
+          <text x="350" y="772" class="lbl">synthesis</text>
+          <text x="350" y="794" class="small">&ldquo;Scope by derivation is filed after</text>
+          <text x="350" y="812" class="small">all: issue #15&hellip;&rdquo;</text>
+          <rect x="154" y="778" width="12" height="12" class="clm"/><rect x="172" y="778" width="12" height="12" class="clm"/><rect x="190" y="778" width="12" height="12" class="clm"/><rect x="208" y="778" width="12" height="12" class="clm"/>
+          <text x="181" y="810" text-anchor="middle" class="lbl">4 claims cited</text>
+          <path d="M232,786 L325,786" class="edge" marker-end="url(#ah4)"/>
+
+          <!-- first synthesis -->
+          <path d="M485,884 L485,830" class="edge" marker-end="url(#ah4)"/>
+          <text x="500" y="862" class="lbl">thesis</text>
+          <rect x="330" y="884" width="310" height="76" rx="14" class="box"/>
+          <text x="350" y="908" class="lbl">synthesis</text>
+          <text x="350" y="930" class="small">&ldquo;As of 2026-08-22 (commit c5782e1)</text>
+          <text x="350" y="948" class="small">the DKF draft has absorbed&hellip;&rdquo;</text>
+          <rect x="118" y="904" width="12" height="12" class="clm"/><rect x="136" y="904" width="12" height="12" class="clm"/><rect x="154" y="904" width="12" height="12" class="clm"/><rect x="172" y="904" width="12" height="12" class="clm"/><rect x="190" y="904" width="12" height="12" class="clm"/><rect x="208" y="904" width="12" height="12" class="clm"/>
+          <rect x="154" y="922" width="12" height="12" class="clm"/><rect x="172" y="922" width="12" height="12" class="clm"/><rect x="190" y="922" width="12" height="12" class="clm"/><rect x="208" y="922" width="12" height="12" class="clm"/>
+          <text x="166" y="954" text-anchor="middle" class="lbl">10 claims cited</text>
+          <path d="M232,916 L325,916" class="edge" marker-end="url(#ah4)"/>
+
+          <!-- the particular -->
+          <path d="M485,1012 L485,966" class="edge-dot" marker-end="url(#ah4)"/>
+          <text x="500" y="994" class="lbl">the subject of every claim above</text>
+          <rect x="320" y="1012" width="330" height="54" rx="27" class="box-par"/>
+          <text x="342" y="1034" class="lbl">particular</text>
+          <text x="342" y="1054" class="small" font-weight="600">Dialectical Knowledge Format</text>
         </svg>
         </div>
         <figcaption>Generated from the project&rsquo;s own workspace with
-          <code>particulars export --format mermaid</code> on 29&nbsp;August&nbsp;2026,
-          ids omitted for readability &middot;
+          <code>particulars export --format mermaid --scope organisation</code> on
+          29&nbsp;August&nbsp;2026 &mdash; full depth, ids omitted, claims drawn as
+          clusters, the subject particular added for orientation &middot;
           <a href="https://github.com/nodelogicau/particulars/releases/tag/v0.1">see the v0.1 release</a></figcaption>
       </figure>
     </div>
