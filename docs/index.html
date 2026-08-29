@@ -195,19 +195,20 @@
   <section id="two-fates">
     <div class="wrap">
       <h2>One fact, two fates</h2>
-      <p class="lead">In March, the team deploys on Fridays. In June, they switch to
-        Tuesdays. What does your knowledge base say in September?</p>
+      <p class="lead">In March, Priya owns the billing service. In June, Ada takes
+        over. When billing breaks at 2&nbsp;a.m. in September &mdash; who does your
+        agent page?</p>
 
       <figure>
         <div class="diagram-wrap">
         <svg class="min640" viewBox="0 0 780 420" role="img" aria-labelledby="fates-title fates-desc">
           <title id="fates-title">One fact, two fates</title>
-          <desc id="fates-desc">In ordinary memory, the March note that deploys go out
-            on Fridays is never challenged, so by September the agent still answers
-            Fridays, and nothing knows it is stale. In particulars, a June claim that
-            deploys moved to Tuesdays challenges the March claim, and a synthesis
-            reconciles them: Tuesdays is the current belief, with the reasoning kept
-            and open questions declared.</desc>
+          <desc id="fates-desc">In ordinary memory, the March note that Priya owns
+            billing is never challenged, so in September the agent pages Priya at
+            2 a.m., wrongly — and nothing knows it is stale. In particulars, a June
+            claim that Ada took over billing challenges the March claim, and a
+            synthesis reconciles them: Ada owns billing since June 12 is the current
+            belief, with the reasoning kept and open questions declared.</desc>
           <defs>
             <marker id="ah2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
               <path d="M0,0 L10,5 L0,10 z" class="head"/>
@@ -219,40 +220,40 @@
 
           <!-- left: ordinary memory -->
           <rect x="95" y="56" width="200" height="58" rx="10" class="box"/>
-          <text x="115" y="80" class="small">&ldquo;Deploys go out on Fridays.&rdquo;</text>
+          <text x="115" y="80" class="small">&ldquo;Priya owns billing.&rdquo;</text>
           <text x="115" y="100" class="lbl">March</text>
 
           <path d="M195,114 L195,196" class="edge edge-dash" marker-end="url(#ah2)"/>
           <text x="195" y="160" text-anchor="middle" class="lbl">June passes. Nothing challenges it.</text>
 
           <rect x="95" y="200" width="200" height="58" rx="10" class="box-stale"/>
-          <text x="115" y="224" class="small">&ldquo;Deploys go out on Fridays.&rdquo;</text>
+          <text x="115" y="224" class="small">&ldquo;Priya owns billing.&rdquo;</text>
           <text x="115" y="244" class="stale-t small">September &middot; stale</text>
 
           <text x="195" y="298" text-anchor="middle" class="lbl">nothing knows it&rsquo;s wrong &mdash; the agent</text>
-          <text x="195" y="318" text-anchor="middle" class="lbl">still answers &ldquo;Fridays&rdquo;, confidently</text>
+          <text x="195" y="318" text-anchor="middle" class="lbl">pages Priya at 2&nbsp;a.m., wrongly</text>
 
           <!-- right: particulars -->
           <rect x="485" y="56" width="200" height="52" rx="10" class="box"/>
-          <text x="505" y="78" class="small">&ldquo;Deploys go out on Fridays.&rdquo;</text>
+          <text x="505" y="78" class="small">&ldquo;Priya owns billing.&rdquo;</text>
           <text x="505" y="97" class="lbl">claim &middot; March &middot; thesis</text>
 
           <path d="M585,108 L585,140" class="edge" marker-end="url(#ah2)"/>
           <text x="600" y="130" class="lbl">challenged</text>
 
           <rect x="485" y="144" width="200" height="52" rx="10" class="box-challenge"/>
-          <text x="505" y="166" class="small">&ldquo;Deploys moved to Tuesdays.&rdquo;</text>
+          <text x="505" y="166" class="small">&ldquo;Ada took over billing.&rdquo;</text>
           <text x="505" y="185" class="challenge-t small">claim &middot; June &middot; antithesis</text>
 
           <path d="M585,196 L585,228" class="edge" marker-end="url(#ah2)"/>
           <text x="600" y="218" class="lbl">reconciled</text>
 
           <rect x="468" y="232" width="234" height="76" rx="10" class="box-accent"/>
-          <text x="488" y="256" class="small">&ldquo;Tuesdays &mdash; moved June 12.&rdquo;</text>
+          <text x="488" y="256" class="small">&ldquo;Ada owns billing since June 12.&rdquo;</text>
           <text x="488" y="275" class="small">reasoning &amp; open questions kept</text>
           <text x="488" y="296" class="accent-t small">synthesis &middot; CURRENT</text>
 
-          <text x="585" y="344" text-anchor="middle" class="lbl">the agent answers &ldquo;Tuesdays&rdquo; &mdash;</text>
+          <text x="585" y="344" text-anchor="middle" class="lbl">the agent pages Ada &mdash;</text>
           <text x="585" y="364" text-anchor="middle" class="lbl">and can show why</text>
         </svg>
         </div>
@@ -394,10 +395,10 @@
       <pre class="term"><code><span class="p">$</span> brew install nodelogicau/tap/particulars
 <span class="p">$</span> particulars init ./knowledge --author you
 <span class="p">$</span> particulars skill install
-<span class="p">$</span> particulars particular define --label "Deploy process"
-<span class="p">$</span> particulars claim assert --subject "Deploy process" \
-    --content "Deploys go out on Tuesdays." --evidential held
-<span class="p">$</span> particulars recall "Deploy process"</code></pre>
+<span class="p">$</span> particulars particular define --label "Billing service"
+<span class="p">$</span> particulars claim assert --subject "Billing service" \
+    --content "Ada took over billing from Priya on June 12." --evidential held
+<span class="p">$</span> particulars recall "Billing service"</code></pre>
 
       <p>From there, your agent does the bookkeeping: the installed skill teaches it
         the verbs, and every session builds on what you&rsquo;ve accepted.</p>
@@ -408,8 +409,9 @@
         <li><a href="https://github.com/nodelogicau/particulars/releases/tag/v0.1">v0.1 release</a></li>
       </ul>
 
-      <p class="roadmap"><strong>Today:</strong> the CLI, in your terminal and your
-        agent&rsquo;s. &nbsp;&middot;&nbsp; <strong>In design:</strong> remote MCP.</p>
+      <p class="roadmap"><strong>Today:</strong> the CLI, the agent skill, and a
+        local MCP server for Claude Desktop (<code>particulars serve --mcp</code>).
+        &nbsp;&middot;&nbsp; <strong>In design:</strong> remote MCP.</p>
     </div>
   </section>
 
