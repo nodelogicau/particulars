@@ -1,0 +1,426 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Particulars</title>
+<meta name="description" content="Particulars — the Dialectical Knowledge Format. Knowledge that doesn't go stale, built together by humans and AI agents.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cpolygon points='16,3 29,16 16,29 3,16' fill='%230e8a6d'/%3E%3C/svg%3E">
+<!--
+  The proof graph in section 4 is a static rendering of real output from:
+    particulars export - -format mermaid - -subject "Dialectical Knowledge Format" - -depth 1
+  (remove the spaces in the flags; written this way so this comment can't be
+  mistaken for the command) run against the particulars-knowledge workspace.
+  When regenerating: re-run the export, redraw the nodes/edges to match, verify
+  every included node is organisation- or public-scoped, and update the
+  generation date in the section 4 caption.
+-->
+<style>
+  :root {
+    --bg: #faf9f7;
+    --fg: #1f2430;
+    --muted: #5b6270;
+    --line: #d8d5cf;
+    --card: #ffffff;
+    --accent: #0e8a6d;
+    --accent-soft: #e2f3ee;
+    --challenge: #b45309;
+    --challenge-soft: #fbeedd;
+    --stale: #b3341f;
+    --code-bg: #171c26;
+    --code-fg: #e6e9ef;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #12151c;
+      --fg: #e8e6e1;
+      --muted: #a0a7b3;
+      --line: #2c313d;
+      --card: #1a1e27;
+      --accent: #3ecfa4;
+      --accent-soft: #1c2f2a;
+      --challenge: #f0a04b;
+      --challenge-soft: #2f2619;
+      --stale: #e0604a;
+      --code-bg: #0c0e13;
+      --code-fg: #dfe3ea;
+    }
+  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--fg);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    line-height: 1.6;
+    -webkit-text-size-adjust: 100%;
+  }
+  main, footer { display: block; }
+  .wrap { max-width: 920px; margin: 0 auto; padding: 0 1.25rem; }
+  section { padding: 3.5rem 0; }
+  section + section { border-top: 1px solid var(--line); }
+
+  h1, h2 { line-height: 1.15; letter-spacing: -0.015em; }
+  h1 { font-size: clamp(2.1rem, 6vw, 3.4rem); margin: 0.5rem 0 1rem; }
+  h2 { font-size: clamp(1.5rem, 4vw, 2.1rem); margin: 0 0 0.75rem; }
+  p.lead { font-size: 1.125rem; color: var(--muted); max-width: 44rem; }
+  a { color: var(--accent); }
+  code, pre { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+
+  .eyebrow {
+    font-size: 0.8rem; font-weight: 600; letter-spacing: 0.14em;
+    text-transform: uppercase; color: var(--accent); margin: 0;
+  }
+  .hero { text-align: center; padding-top: 4.5rem; }
+  .hero p.lead { margin: 0 auto 1.75rem; }
+  .cta { display: inline-block; margin: 0.25rem 0.4rem; padding: 0.65rem 1.3rem;
+    border-radius: 999px; text-decoration: none; font-weight: 600; }
+  .cta.primary { background: var(--accent); color: var(--bg); }
+  .cta.ghost { color: var(--accent); border: 1.5px solid var(--accent); }
+
+  figure { margin: 2.25rem 0 0; }
+  .diagram-wrap { overflow-x: auto; }
+  .diagram-wrap svg { display: block; margin: 0 auto; max-width: 100%; height: auto; }
+  svg.min640 { min-width: 640px; }
+  svg.min600 { min-width: 600px; }
+  figcaption { font-size: 0.9rem; color: var(--muted); text-align: center; margin-top: 0.75rem; }
+
+  /* diagram vocabulary */
+  svg text { fill: var(--fg); font-family: inherit; font-size: 15px; }
+  svg .small { font-size: 12.5px; }
+  svg .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 12px; }
+  svg .lbl { fill: var(--muted); font-size: 13px; }
+  svg .accent-t { fill: var(--accent); font-weight: 600; }
+  svg .challenge-t { fill: var(--challenge); font-weight: 600; }
+  svg .stale-t { fill: var(--stale); font-weight: 600; }
+  svg .box { fill: var(--card); stroke: var(--line); stroke-width: 1.5; }
+  svg .box-accent { fill: var(--accent-soft); stroke: var(--accent); stroke-width: 2.5; }
+  svg .box-challenge { fill: var(--challenge-soft); stroke: var(--challenge); stroke-width: 1.5; }
+  svg .box-stale { fill: var(--card); stroke: var(--stale); stroke-width: 1.5; stroke-dasharray: 5 4; }
+  svg .edge { stroke: var(--muted); stroke-width: 1.5; fill: none; }
+  svg .edge-dash { stroke-dasharray: 5 5; }
+  svg .head { fill: var(--muted); }
+  svg .divider { stroke: var(--line); stroke-dasharray: 3 6; stroke-width: 1.5; }
+
+  .kicker {
+    font-size: clamp(1.15rem, 3vw, 1.5rem); font-weight: 650; text-align: center;
+    max-width: 38rem; margin: 2.5rem auto 0; line-height: 1.5;
+  }
+  .kicker span { color: var(--accent); }
+
+  .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+    gap: 1rem; margin-top: 2.25rem; }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 12px;
+    padding: 1.1rem 1.2rem; }
+  .card h3 { margin: 0 0 0.4rem; font-size: 1rem; }
+  .card p { margin: 0; font-size: 0.925rem; color: var(--muted); }
+
+  pre.term {
+    background: var(--code-bg); color: var(--code-fg); border-radius: 12px;
+    padding: 1.25rem 1.4rem; overflow-x: auto; font-size: 0.9rem; line-height: 1.7;
+    margin: 1.75rem 0;
+  }
+  pre.term .p { color: #7fd6bb; user-select: none; }
+
+  .links { margin: 1.5rem 0 0; padding: 0; list-style: none;
+    display: flex; flex-wrap: wrap; gap: 0.5rem 1.75rem; font-weight: 600; }
+  .roadmap {
+    margin-top: 2.5rem; padding: 0.85rem 1.2rem; border: 1px solid var(--line);
+    border-radius: 12px; background: var(--card); font-size: 0.925rem; color: var(--muted);
+  }
+  .roadmap strong { color: var(--fg); }
+
+  footer { border-top: 1px solid var(--line); padding: 2rem 0 3rem;
+    font-size: 0.875rem; color: var(--muted); }
+  footer a { color: inherit; }
+</style>
+</head>
+<body>
+<main>
+
+  <!-- 1 · HERO -->
+  <section class="hero">
+    <div class="wrap">
+      <p class="eyebrow">Particulars &middot; the Dialectical Knowledge Format</p>
+      <h1>Knowledge that doesn&rsquo;t go stale.</h1>
+      <p class="lead">An open format and CLI for the knowledge you and your AI agents
+        build together. When the world changes, particulars doesn&rsquo;t overwrite what
+        you knew &mdash; it records the challenge, reconciles it, and keeps the reasoning.</p>
+      <p>
+        <a class="cta primary" href="#start">Get started</a>
+        <a class="cta ghost" href="https://github.com/nodelogicau/particulars">Read the spec</a>
+      </p>
+
+      <figure>
+        <div class="diagram-wrap">
+        <svg class="min600" viewBox="0 0 780 270" role="img" aria-labelledby="triad-title triad-desc">
+          <title id="triad-title">The dialectic</title>
+          <desc id="triad-desc">A thesis and an antithesis are reconciled into a
+            synthesis, which keeps the reasoning and declares what is unresolved.
+            The synthesis becomes the next thesis, ready to be challenged again.</desc>
+          <defs>
+            <marker id="ah1" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+              <path d="M0,0 L10,5 L0,10 z" class="head"/>
+            </marker>
+          </defs>
+          <rect x="40" y="48" width="150" height="44" rx="22" class="box"/>
+          <text x="115" y="76" text-anchor="middle" font-weight="600">thesis</text>
+          <text x="115" y="118" text-anchor="middle" class="lbl">what you believed</text>
+
+          <rect x="40" y="168" width="150" height="44" rx="22" class="box-challenge"/>
+          <text x="115" y="196" text-anchor="middle" font-weight="600">antithesis</text>
+          <text x="115" y="238" text-anchor="middle" class="lbl">what challenged it</text>
+
+          <path d="M190,70 C260,70 290,110 322,128" class="edge" marker-end="url(#ah1)"/>
+          <path d="M190,190 C260,190 290,152 322,134" class="edge" marker-end="url(#ah1)"/>
+
+          <polygon points="392,84 462,131 392,178 322,131" class="box-accent"/>
+          <text x="392" y="137" text-anchor="middle" font-weight="600">synthesis</text>
+          <text x="392" y="208" text-anchor="middle" class="lbl">keeps the reasoning</text>
+          <text x="392" y="228" text-anchor="middle" class="lbl">declares what&rsquo;s unresolved</text>
+
+          <path d="M462,131 L540,131" class="edge" marker-end="url(#ah1)"/>
+          <rect x="545" y="109" width="160" height="44" rx="22" class="box"/>
+          <text x="625" y="137" text-anchor="middle" font-weight="600">the next thesis</text>
+          <path d="M705,131 L755,131" class="edge edge-dash" marker-end="url(#ah1)"/>
+          <text x="625" y="179" text-anchor="middle" class="lbl">&hellip;until it&rsquo;s challenged again</text>
+        </svg>
+        </div>
+      </figure>
+    </div>
+  </section>
+
+  <!-- 2 · ONE FACT, TWO FATES -->
+  <section id="two-fates">
+    <div class="wrap">
+      <h2>One fact, two fates</h2>
+      <p class="lead">In March, the team deploys on Fridays. In June, they switch to
+        Tuesdays. What does your knowledge base say in September?</p>
+
+      <figure>
+        <div class="diagram-wrap">
+        <svg class="min640" viewBox="0 0 780 420" role="img" aria-labelledby="fates-title fates-desc">
+          <title id="fates-title">One fact, two fates</title>
+          <desc id="fates-desc">In ordinary memory, the March note that deploys go out
+            on Fridays is never challenged, so by September the agent still answers
+            Fridays, and nothing knows it is stale. In particulars, a June claim that
+            deploys moved to Tuesdays challenges the March claim, and a synthesis
+            reconciles them: Tuesdays is the current belief, with the reasoning kept
+            and open questions declared.</desc>
+          <defs>
+            <marker id="ah2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+              <path d="M0,0 L10,5 L0,10 z" class="head"/>
+            </marker>
+          </defs>
+          <text x="195" y="34" text-anchor="middle" class="lbl" font-weight="600">ordinary memory</text>
+          <text x="585" y="34" text-anchor="middle" class="lbl" font-weight="600">particulars</text>
+          <line x1="390" y1="24" x2="390" y2="396" class="divider"/>
+
+          <!-- left: ordinary memory -->
+          <rect x="95" y="56" width="200" height="58" rx="10" class="box"/>
+          <text x="115" y="80" class="small">&ldquo;Deploys go out on Fridays.&rdquo;</text>
+          <text x="115" y="100" class="lbl">March</text>
+
+          <path d="M195,114 L195,196" class="edge edge-dash" marker-end="url(#ah2)"/>
+          <text x="195" y="160" text-anchor="middle" class="lbl">June passes. Nothing challenges it.</text>
+
+          <rect x="95" y="200" width="200" height="58" rx="10" class="box-stale"/>
+          <text x="115" y="224" class="small">&ldquo;Deploys go out on Fridays.&rdquo;</text>
+          <text x="115" y="244" class="stale-t small">September &middot; stale</text>
+
+          <text x="195" y="298" text-anchor="middle" class="lbl">nothing knows it&rsquo;s wrong &mdash; the agent</text>
+          <text x="195" y="318" text-anchor="middle" class="lbl">still answers &ldquo;Fridays&rdquo;, confidently</text>
+
+          <!-- right: particulars -->
+          <rect x="485" y="56" width="200" height="52" rx="10" class="box"/>
+          <text x="505" y="78" class="small">&ldquo;Deploys go out on Fridays.&rdquo;</text>
+          <text x="505" y="97" class="lbl">claim &middot; March &middot; thesis</text>
+
+          <path d="M585,108 L585,140" class="edge" marker-end="url(#ah2)"/>
+          <text x="600" y="130" class="lbl">challenged</text>
+
+          <rect x="485" y="144" width="200" height="52" rx="10" class="box-challenge"/>
+          <text x="505" y="166" class="small">&ldquo;Deploys moved to Tuesdays.&rdquo;</text>
+          <text x="505" y="185" class="challenge-t small">claim &middot; June &middot; antithesis</text>
+
+          <path d="M585,196 L585,228" class="edge" marker-end="url(#ah2)"/>
+          <text x="600" y="218" class="lbl">reconciled</text>
+
+          <rect x="468" y="232" width="234" height="76" rx="10" class="box-accent"/>
+          <text x="488" y="256" class="small">&ldquo;Tuesdays &mdash; moved June 12.&rdquo;</text>
+          <text x="488" y="275" class="small">reasoning &amp; open questions kept</text>
+          <text x="488" y="296" class="accent-t small">synthesis &middot; CURRENT</text>
+
+          <text x="585" y="344" text-anchor="middle" class="lbl">the agent answers &ldquo;Tuesdays&rdquo; &mdash;</text>
+          <text x="585" y="364" text-anchor="middle" class="lbl">and can show why</text>
+        </svg>
+        </div>
+        <figcaption>The same fact, in a memory that stores state and in one that records change.</figcaption>
+      </figure>
+
+      <p class="kicker">Overwriting loses the <span>why</span>. Appending loses the
+        <span>truth</span>. Reconciling keeps <span>both</span>.</p>
+
+      <div class="cards">
+        <div class="card">
+          <h3>Notes &amp; wikis</h3>
+          <p>Store the current state. How you got there &mdash; and what was rejected
+            along the way &mdash; is archaeology in an edit log.</p>
+        </div>
+        <div class="card">
+          <h3>Vector memory</h3>
+          <p>Recalls everything ever said, with no notion of which claims have been
+            superseded &mdash; or why.</p>
+        </div>
+        <div class="card">
+          <h3>Docs with expiry dates</h3>
+          <p>A best-before date tells you when to doubt a document &mdash; not what&rsquo;s
+            true now. Refreshing overwrites the reasoning.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 3 · THE LOOP -->
+  <section id="loop">
+    <div class="wrap">
+      <h2>Agents propose. You decide.</h2>
+      <p class="lead">A particulars workspace is plain YAML in a git repository. Your
+        agent recalls before it asserts, reasons about what it finds, and writes its
+        conclusions on a branch. Everything an agent writes is a proposal until a
+        human merges it.</p>
+
+      <figure>
+        <div class="diagram-wrap">
+        <svg class="min640" viewBox="0 0 800 370" role="img" aria-labelledby="loop-title loop-desc">
+          <title id="loop-title">The collaboration loop</title>
+          <desc id="loop-desc">In its session, the agent recalls what is already
+            believed, reasons about whether new information extends or contradicts
+            it, and asserts claims and syntheses as YAML files on a branch. It opens
+            a pull request. You review a graph of claims rather than a diff, then
+            merge; merging is acceptance, and the next session starts from what you
+            accepted.</desc>
+          <defs>
+            <marker id="ah3" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+              <path d="M0,0 L10,5 L0,10 z" class="head"/>
+            </marker>
+          </defs>
+
+          <rect x="30" y="42" width="310" height="238" rx="14" class="box"/>
+          <text x="52" y="74" font-weight="600">your agent&rsquo;s session</text>
+          <text x="52" y="112" class="small"><tspan class="accent-t">recall</tspan> &mdash; what&rsquo;s already believed?</text>
+          <text x="52" y="146" class="small"><tspan class="accent-t">reason</tspan> &mdash; does this extend or contradict?</text>
+          <text x="52" y="180" class="small"><tspan class="accent-t">assert &amp; synthesise</tspan> &mdash; on a branch</text>
+          <text x="52" y="222" class="mono lbl">claims/clm_&hellip;.yaml</text>
+          <text x="52" y="244" class="mono lbl">syntheses/syn_&hellip;.yaml</text>
+
+          <path d="M340,161 L460,161" class="edge" marker-end="url(#ah3)"/>
+          <text x="400" y="144" text-anchor="middle" class="lbl">opens a</text>
+          <text x="400" y="184" text-anchor="middle" class="lbl">pull request</text>
+
+          <rect x="460" y="42" width="310" height="238" rx="14" class="box"/>
+          <text x="482" y="74" font-weight="600">you</text>
+          <text x="482" y="112" class="small"><tspan class="accent-t">review</tspan> &mdash; a graph of claims, not a diff</text>
+          <text x="482" y="146" class="small"><tspan class="accent-t">question</tspan> &mdash; amend, or push back</text>
+          <text x="482" y="180" class="small"><tspan class="accent-t">merge</tspan> &mdash; acceptance into shared belief</text>
+
+          <path d="M615,280 C615,344 185,344 185,284" class="edge" marker-end="url(#ah3)"/>
+          <text x="400" y="308" text-anchor="middle" class="lbl">the next session starts from what you accepted</text>
+        </svg>
+        </div>
+        <figcaption>The review loop: agents do the bookkeeping, humans keep the authority.</figcaption>
+      </figure>
+    </div>
+  </section>
+
+  <!-- 4 · PROOF -->
+  <section id="proof">
+    <div class="wrap">
+      <h2>Dogfooded into existence</h2>
+      <p class="lead">This isn&rsquo;t a mock-up. The graph below is real tool output from
+        the workspace this format was designed in &mdash; where the current belief
+        records the release of v0.1 itself.</p>
+
+      <figure>
+        <div class="diagram-wrap">
+        <svg class="min600" viewBox="0 0 760 360" role="img" aria-labelledby="proof-title proof-desc">
+          <title id="proof-title">The workspace&rsquo;s current belief about DKF v0.1</title>
+          <desc id="proof-desc">Two inputs — a claim that DKF v0.1 was declared on
+            26 August 2026 with tag v0.1, and the previous synthesis that had
+            committed its next update to be the declaration — feed as theses into
+            the current synthesis: DKF v0.1 is declared.</desc>
+          <defs>
+            <marker id="ah4" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+              <path d="M0,0 L10,5 L0,10 z" class="head"/>
+            </marker>
+          </defs>
+
+          <rect x="180" y="36" width="400" height="88" rx="14" class="box-accent"/>
+          <text x="202" y="64" class="mono">syn&hellip;e91325 &middot; synthesis &middot; <tspan class="accent-t">CURRENT</tspan></text>
+          <text x="202" y="88" class="small">&ldquo;DKF v0.1 is declared: tag v0.1 (db55fbf),</text>
+          <text x="202" y="108" class="small">2026-08-26. &hellip;the maintainer made the call&hellip;&rdquo;</text>
+
+          <path d="M210,224 C210,180 300,150 342,130" class="edge" marker-end="url(#ah4)"/>
+          <text x="242" y="168" class="lbl">thesis</text>
+          <path d="M550,224 C550,180 460,150 418,130" class="edge" marker-end="url(#ah4)"/>
+          <text x="488" y="168" class="lbl">thesis</text>
+
+          <rect x="50" y="228" width="310" height="88" rx="6" class="box"/>
+          <text x="72" y="256" class="mono">clm&hellip;3400a7 &middot; claim</text>
+          <text x="72" y="280" class="small">&ldquo;DKF v0.1 was declared on 2026-08-26:</text>
+          <text x="72" y="300" class="small">tag v0.1 points at db55fbf&hellip;&rdquo;</text>
+
+          <rect x="400" y="228" width="310" height="88" rx="14" class="box"/>
+          <text x="422" y="256" class="mono">syn&hellip;b03639 &middot; synthesis</text>
+          <text x="422" y="280" class="small">&ldquo;The previous belief committed its next</text>
+          <text x="422" y="300" class="small">update to be the declaration&hellip;&rdquo;</text>
+        </svg>
+        </div>
+        <figcaption>Generated from the project&rsquo;s own workspace with
+          <code>particulars export --format mermaid</code> on 29&nbsp;August&nbsp;2026 &middot;
+          <a href="https://github.com/nodelogicau/particulars/releases/tag/v0.1">see the v0.1 release</a></figcaption>
+      </figure>
+    </div>
+  </section>
+
+  <!-- 5 · START -->
+  <section id="start">
+    <div class="wrap">
+      <h2>Start in your terminal</h2>
+      <p class="lead">Install the CLI, make a workspace, and teach your agent the
+        discipline &mdash; recall before you assert, reconcile when you contradict.</p>
+
+      <pre class="term"><code><span class="p">$</span> brew install nodelogicau/tap/particulars
+<span class="p">$</span> particulars init ./knowledge --author you
+<span class="p">$</span> particulars skill install
+<span class="p">$</span> particulars particular define --label "Deploy process"
+<span class="p">$</span> particulars claim assert --subject "Deploy process" \
+    --content "Deploys go out on Tuesdays." --evidential held
+<span class="p">$</span> particulars recall "Deploy process"</code></pre>
+
+      <p>From there, your agent does the bookkeeping: the installed skill teaches it
+        the verbs, and every session builds on what you&rsquo;ve accepted.</p>
+
+      <ul class="links">
+        <li><a href="https://github.com/nodelogicau/particulars">The specification</a></li>
+        <li><a href="https://github.com/nodelogicau/particulars-cli">The CLI</a></li>
+        <li><a href="https://github.com/nodelogicau/particulars/releases/tag/v0.1">v0.1 release</a></li>
+      </ul>
+
+      <p class="roadmap"><strong>Today:</strong> the CLI, in your terminal and your
+        agent&rsquo;s. &nbsp;&middot;&nbsp; <strong>In design:</strong> remote MCP.</p>
+    </div>
+  </section>
+
+</main>
+
+<footer>
+  <div class="wrap">
+    <p>Particulars is an open format from
+      <a href="https://github.com/nodelogicau">Node Logic</a>. Specification and CLI
+      are MIT-licensed. &copy; 2026 Node Logic.</p>
+  </div>
+</footer>
+</body>
+</html>
