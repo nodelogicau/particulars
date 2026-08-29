@@ -15,11 +15,11 @@ The site SHALL consist of a single page presenting, in order: (1) a hero with th
 - **THEN** each term is grounded by the concrete example in the diagrams, and no section assumes prior knowledge of Hegelian dialectic or of any file format
 
 ### Requirement: Category-based differentiation
-The page SHALL differentiate particulars against categories of knowledge tooling — current-state notes/wikis, vector memory, and documents with freshness/expiry metadata — and SHALL NOT name any competing product, project, or vendor.
+The page's own prose SHALL differentiate particulars against categories of knowledge tooling — current-state notes/wikis, vector memory, and documents with freshness/expiry metadata — and SHALL NOT name any competing product, project, or vendor in its prose or diagram labels. Verbatim workspace knowledge reproduced in the proof section (such as node tooltips) MAY name competitors, since redacting it would falsify the record (maintainer's decision, 2026-08-29).
 
-#### Scenario: No competitor names appear
-- **WHEN** the page text and diagram labels are searched
-- **THEN** no competing product, format, or vendor name is present
+#### Scenario: No competitor names in the page's own voice
+- **WHEN** the page's prose, headings, cards, and diagram labels are searched
+- **THEN** no competing product, format, or vendor name is present outside verbatim workspace content
 
 #### Scenario: Expiry-date contrast is made
 - **WHEN** the differentiation content is read

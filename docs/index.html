@@ -15,15 +15,15 @@
   are omitted; the seven syntheses keep verbatim content excerpts; each
   generation's input claims are drawn as a counted cluster of squares rather
   than content boxes; the subject particular is added at the root (the export
-  does not emit it); and the one unsynthesised claim is shown only as the
-  dashed "awaiting reconciliation" box, because its content names a competitor
-  and the page names none. Every node carries a native SVG <title> tooltip
-  whose text is the full content from the export's mermaid click-callback
-  tooltips (CLI 0.10.0+), mapped square-by-square in citation order per
-  cluster; the one qualifying claim whose text names a competitor has that
-  name replaced with "[competitor]" in its tooltip. When regenerating: re-run the export, update the spine, cluster
-  counts, tooltip texts, and totals in the lead paragraph to match, and update
-  the generation date in the section 4 caption.
+  does not emit it); and the one unsynthesised claim is drawn as the dashed
+  "awaiting reconciliation" box. Every node carries a native SVG <title>
+  tooltip whose text is the verbatim content from the export's mermaid
+  click-callback tooltips (CLI 0.10.0+), mapped square-by-square in citation
+  order per cluster. The page's own prose names no competitor, but verbatim
+  workspace knowledge in tooltips may (maintainer's decision, 2026-08-29).
+  When regenerating: re-run the export, update the spine, cluster counts,
+  tooltip texts, and totals in the lead paragraph to match, and update the
+  generation date in the section 4 caption.
 -->
 <style>
   :root {
@@ -385,11 +385,11 @@
           <text x="342" y="90" class="small">&ldquo;The declared format now has a</text>
           <text x="342" y="108" class="small">public face: release 2026-08-26,</text>
           <text x="342" y="126" class="small">particulars.fyi live 2026-08-29.&rdquo;</text>
-          <rect x="172" y="80" width="12" height="12" class="clm"><title>claim · thesis — The v0.1 declaration was published as GitHub release ”DKF v0.1” on 2026-08-26T02:49:20Z: a full release (not draft or prerelease) on tag v0.1 with no assets and an auto-generated changelog-only body, so the release adds an announcement surface for the tag rather than any artefact.</title></rect><rect x="190" y="80" width="12" height="12" class="clm"><title>claim · thesis — particulars.fyi went live on 2026-08-29: a single-page practitioner-facing landing site served by GitHub Pages from docs/ in the spec repository, with enforced HTTPS. The launch surfaced that the LICENSE file still carried MIT while the spec text declared CC0; LICENSE was corrected to CC0 1.0 Universal the same day (88e0e11).</title></rect><rect x="208" y="80" width="12" height="12" class="clm"><title>claim · qualifying — The particulars.fyi landing page positions against [competitor]-style freshness metadata only by category (its 'docs with expiry dates' card) and deliberately names no competitor, per the maintainer's 2026-08-29 decision recorded in the add-landing-page design: named comparisons date the page and invite feature-by-feature rebuttal, while beating categories is evergreen.</title></rect>
+          <rect x="172" y="80" width="12" height="12" class="clm"><title>claim · thesis — The v0.1 declaration was published as GitHub release ”DKF v0.1” on 2026-08-26T02:49:20Z: a full release (not draft or prerelease) on tag v0.1 with no assets and an auto-generated changelog-only body, so the release adds an announcement surface for the tag rather than any artefact.</title></rect><rect x="190" y="80" width="12" height="12" class="clm"><title>claim · thesis — particulars.fyi went live on 2026-08-29: a single-page practitioner-facing landing site served by GitHub Pages from docs/ in the spec repository, with enforced HTTPS. The launch surfaced that the LICENSE file still carried MIT while the spec text declared CC0; LICENSE was corrected to CC0 1.0 Universal the same day (88e0e11).</title></rect><rect x="208" y="80" width="12" height="12" class="clm"><title>claim · qualifying — The particulars.fyi landing page positions against OKF-style freshness metadata only by category (its 'docs with expiry dates' card) and deliberately names no competitor, per the maintainer's 2026-08-29 decision recorded in the add-landing-page design: named comparisons date the page and invite feature-by-feature rebuttal, while beating categories is evergreen.</title></rect>
           <text x="196" y="112" text-anchor="middle" class="lbl">3 claims cited</text>
           <path d="M232,92 L315,92" class="edge" marker-end="url(#ah4)"/>
 
-          <rect x="40" y="140" width="250" height="48" rx="8" class="box-unsyn"/>
+          <rect x="40" y="140" width="250" height="48" rx="8" class="box-unsyn"><title>claim · unsynthesised — DKF's differentiation from OKF is the update model, not the storage model: both are vendor-neutral plain files in git maintained by humans and agents, but OKF schedules staleness in advance (frontmatter status/stale_after) and refreshes by rewriting the document, leaving the why in git history, whereas DKF detects staleness when a contradicting claim arrives and resolves it with a synthesis that carries the reasoning and declares what remains unresolved.</title></rect>
           <text x="165" y="160" text-anchor="middle" class="lbl">&hellip;plus 1 claim unsynthesised,</text>
           <text x="165" y="178" text-anchor="middle" class="lbl">awaiting reconciliation</text>
 
