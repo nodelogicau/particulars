@@ -19,4 +19,4 @@
 - [x] 3.2 Verify quickstart commands verbatim against the released CLI (brew tap install, init, skill install, recall)
 - [x] 3.3 Commit and push `docs/`; enable GitHub Pages (source: main, folder: /docs) and set custom domain particulars.fyi
 - [x] 3.4 Confirm the page serves at the repository's github.io URL
-- [ ] 3.5 Document and hand off registrar DNS records (four GitHub Pages apex A records for particulars.fyi; note that blog.particulars.fyi stays free for Cloudflare later); after DNS propagates, enable Enforce HTTPS and confirm https://particulars.fyi
+- [x] 3.5 Document and hand off registrar DNS records (four GitHub Pages apex A records for particulars.fyi; note that blog.particulars.fyi stays free for Cloudflare later); after DNS propagates, enable Enforce HTTPS and confirm https://particulars.fyi
