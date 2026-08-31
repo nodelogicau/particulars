@@ -101,7 +101,7 @@ carry a `source` block of the same shape:
 
 ```yaml
 source:
-  author: ben                 # a person
+  author: ben                 # a person — an id, URI, or name; see below
   harness: claude             # the AI harness, if one was involved
   model: claude-sonnet-4-6    # the model, if known
   document: https://…         # what was read to make the assertion
@@ -112,6 +112,54 @@ least one of `author` or `harness`. An agent acting with no human in the loop
 is a valid source (`{harness, model}`); a person working without an assistant
 is a valid source (`{author}`). A `source` with neither is malformed.
 Syntheses additionally require `source.harness` — see below.
+
+**`author` is a reference to a particular**, and may take three forms: a
+particular id, a particular URI, or a bare name. Readers resolve an id by
+exact match, a URI by the particular's `uri` — including through merge
+records — and a bare name by label or alias. A value that resolves to no
+particular is an opaque name: it satisfies the minimum above exactly as it
+always has, and is reported as *unresolved*, never invalid. Resolution
+happens when a file is read, which is what lets an existing workspace become
+attributable without a file changing: the moment a particular with alias
+`ben` is defined, every claim carrying `author: ben` is asserted by it.
+
+Writers prefer the URI. When the author is a defined particular, a writer
+writes its `uri` rather than its `par_` id; when given a bare name —
+including from `defaults.source.author` — that resolves to exactly one
+particular, it writes that particular's `uri`; on zero or several matches it
+writes the name unchanged. This is the one place the format prefers a URI
+over an id, and the asymmetry with `subject` is deliberate. A subject is a
+workspace-local anchor whose file travels with the workspace, so a local id
+is the right key. An author is the one particular that recurs across
+workspaces: the same person has a different `par_` id in every workspace
+they write in and the same URI in all of them, and a `source` block is the
+part of a claim most likely to be read outside its workspace — it is what a
+signature would identify. So it carries the identifier that survives the
+trip. A URI is also what merge records join, which makes a URN in one
+workspace and an ORCID in another the same asserter the moment a merge says
+so.
+
+`harness` and `model` remain strings. A harness is a process rather than an
+individual, and the attribution that matters for it — see [Trust and
+Provenance](#trust-and-provenance) — already works on the string.
+
+Two relations follow, and they are never collapsed. An object is **asserted
+by** the particular its `source.author` resolves to, and **reported from**
+the particular its `source.document.author` resolves to (see [Verifiable
+documents](#verifiable-documents)). Both are computed over the merge
+equivalence class of the resolved particular. "Everything Jane said" is the
+union, but the halves mean different things about Jane: a defect in a claim
+she asserted is her misreading; a defect in a claim reported from her is the
+recorder's, and a provenance failure in one is hers.
+
+A bare name that matches more than one particular resolves to **none of
+them**. Resolution never guesses: `particular_resolve` reports ambiguity
+with the candidates rather than choosing, and a validator reports an
+ambiguous author as `author_ambiguous` on the object — a finding, because an
+alias or a merge at that workspace clears it — while unresolved authors are
+reported in aggregate, because they recur on every claim until the
+particular is defined and can be cleared on none of them (see [Findings and
+facts](#trust-and-provenance)).
 
 #### Verifiable documents
 
@@ -124,14 +172,15 @@ source:
   harness: claude
   document:
     ref: docs/architecture.md   # URI, workspace path, or an unfetchable source
+    author: urn:dkf:01a0…:jane  # who produced what was read — optional
     hash: sha256:9f2a…          # optional
     quote: |                    # verbatim, optional
       The billing service listens on port 8443 behind the ingress.
 ```
 
 Both forms are valid and a bare string is not inferior provenance. `ref` is
-required in the mapping form; `hash` and `quote` are optional, and the fields
-are written in the order shown.
+required in the mapping form; `author`, `hash` and `quote` are optional, and
+the fields are written in the order shown.
 
 **`ref` identifies the source**, and holds one of three things: a URI, a path
 resolved against the workspace root, or an identifier for something that
@@ -148,6 +197,21 @@ matters for a reason particular to this format rather than out of tidiness: a
 file carrying `uri` can never be rewritten, since appending a retraction is
 the only permitted modification, so readers must go on accepting it and a
 warning is the only way anyone learns it is there.
+
+**`author` names who produced what was read.** It is a particular reference
+in the same three forms as `source.author` — id, URI, or bare name — and it
+answers a different question: `source.author` is who read the document and
+made the claim; `document.author` is who made the document. "Jane said the
+split happened in Q2", recorded by Ben, is a claim asserted by Ben whose
+document is Jane's utterance and whose document author is Jane. This is why
+the format has no *reportative* evidential, though languages that mark
+evidentiality grammatically always have one: testimony is `observed` —
+someone looked, and what they looked at is the utterance — and what was
+missing was not a fourth value but a field naming the utterance's producer.
+An unrecorded utterance needs nothing new: `ref` stays required and already
+holds an unfetchable source, so `ref: conversation with Jane, 2026-08-30`
+with an `author` and a `quote` is a complete, unverifiable, reported claim.
+An unresolvable `document.author` is reported as unresolved, never invalid.
 
 **The hash** is taken over the document with CRLF sequences normalised to LF
 and *nothing else* altered — not trailing whitespace, not Unicode form, not a
@@ -206,6 +270,13 @@ Implementations SHOULD warn when a claim's effective scope is wider than the
 material it quotes, where that is known. Unlike a synthesis, which summarises
 its inputs, a quote discloses its source completely.
 
+The same is true of attribution. Promoting an object publishes its
+`source.author` URI with it, and a `document.author` discloses *who is being
+quoted* as completely as the quote discloses what they said. Neither is a
+gate — no promotion is refused on this basis — but a reviewer should read
+both as disclosures. Particular files are never served in a feed, so the URI
+is the whole exposure, and it is the URI the person chose to be cited under.
+
 ---
 
 ### `DPARTICULAR`
@@ -230,6 +301,16 @@ publishers pointing at the same URI are making claims about the same thing,
 regardless of local IDs or labels. For well-known subjects, existing URIs —
 Wikidata, DBpedia, ORCID, a DOI, a GitHub URL — are preferred over minting new
 ones.
+
+People and agents are particulars too, and the ones that matter most for
+provenance: a claim's `source.author` and a document's `author` are
+references to particulars (see [Source](#source)). Prefer a global URI for a
+person — an ORCID, a DID, a GitHub profile — over a minted one, because an
+author is the one particular that recurs across workspaces and needs the
+same identity in each. A person's particular carries the URI they are
+willing to be cited under at the widest scope their claims may reach:
+particular files are never served in a feed, so that URI is the whole of
+what a public consumer learns about them.
 
 A URI must be **globally unique**. It is not required to be resolvable until
 the particular is published to `public` scope: most things an agent learns
@@ -577,8 +658,11 @@ only one side has a local particular.
 Non-retracted merge records are **symmetric and transitive**: the particulars
 they join form an equivalence class. `knowledge_recall`, `conflict_detect`,
 and `lineage_trace`, given any member of a class, operate over the whole
-class. Claims keep their original `subject`; nothing is moved or rewritten. A
-merge is undone by retracting it, which removes only that edge.
+class, and so do the asserted-by and reported-from relations of
+[Source](#source), computed over the class of the resolved author. Claims
+keep their original `subject` and their original `source` values; nothing is
+moved or rewritten. A merge is undone by retracting it, which removes only
+that edge.
 
 ---
 
@@ -652,10 +736,10 @@ recall what an external consumer already fetched; nothing in this format can.
 ## Object Model
 
 ```
-DPARTICULAR   the anchor — a specific, identifiable thing
+DPARTICULAR   the anchor — a specific, identifiable thing, people included
 
 DCLAIM        an assertion about a particular
-                ← source: who/what asserted it
+                ← source: who/what asserted it — author is a particular
                 ← subject: which particular it concerns
                 ← context: scope (required) and topics
 
@@ -828,6 +912,7 @@ entries:
     scope: organisation
     topics: [architecture, distributed-systems]
     timestamp: 2024-08-20T09:00:00Z
+    author: https://orcid.org/0000-0002-1825-0097
   - id: clm_01a01ed5-c040-73b0-ba7b-da8a27ab53a6
     type: claim
     subject: par_01916f03-b680-71a2-bad4-40b49d5a5a6d
@@ -858,8 +943,11 @@ entries:
 
 Baseline fields: every entry has `id` and `type`; particulars have `uri`;
 claims and syntheses have `subject`; syntheses have `inputs`; merges have
-`uris`; promotions have `claims` and `scope`. Entries MAY also carry `scope`, `topics`, `timestamp`, and
-`retracted: true` so that `knowledge_recall` can filter without opening files.
+`uris`; promotions have `claims` and `scope`. Entries MAY also carry `scope`,
+`topics`, `timestamp`, `retracted: true`, and `author` and `document-author`
+— the last two mirroring the object's `source.author` and
+`source.document.author` as written — so that `knowledge_recall` can filter
+without opening files.
 Implementations MAY add further fields, and future versions of this
 specification MAY add further entry types; consumers MUST ignore fields and
 entries they do not understand.
@@ -889,7 +977,7 @@ areas.
 | Tool | Description |
 |---|---|
 | `particular_define(uri?, label, aliases[])` | Create or update a particular. Idempotent on URI. When `uri` is omitted one is minted from the label (see [Minting URIs](#minting-uris)). |
-| `particular_resolve(query)` | Find a particular by ID, URI, label, or alias. Returns null if no match. |
+| `particular_resolve(query)` | Find a particular by ID, URI, label, or alias. Returns null if no match; when a label or alias matches more than one particular, reports the candidates and resolves none. |
 
 ### Claim Tools
 
@@ -908,7 +996,7 @@ areas.
 
 | Tool | Description |
 |---|---|
-| `knowledge_recall(particular_id \| query, scope, include_retracted, limit)` | Retrieve claims and syntheses about a particular or topic. Returns in lineage order, identifying `current`. Operates across merged particulars. |
+| `knowledge_recall(particular_id \| query, author?, scope, include_retracted, limit)` | Retrieve claims and syntheses about a particular or topic, or by `author` — an id, URI, label, or alias — returning objects asserted by or reported from that particular's merge class, each labelled which. Combinable with the other filters. Returns in lineage order, identifying `current`. Operates across merged particulars. |
 | `conflict_detect(particular_id \| claim_ids[])` | Return the structural `current` / `unsynthesised` / `stale` sets and a suggested synthesis priority (see [Conflict semantics](#conflict-semantics)). Judging actual contradiction is left to the harness. |
 | `lineage_trace(claim_id, depth)` | Traverse the provenance chain of any claim or synthesis, including `superseded-by` successors. Returns a structured tree. |
 
@@ -999,21 +1087,29 @@ and never affect the payload; object files must not use YAML anchors and
 aliases at all, as a file-format safety rule — alias expansion is a
 resource-exhaustion vector — and validators should reject files carrying
 them. Signature *suites* — algorithms, key formats, DID binding — remain
-reserved: v0.1 defines only what the bytes would be.
+reserved: v0.1 defines only what the bytes would be. The identity a
+signature would naturally bind is the author particular's URI — which is why
+`source.author` prefers a URI (see [Source](#source)) — though that binding,
+like the suites, is left to the signing specification.
 
 **Citation weight** — a synthesis that cites a claim increases that claim's
 standing in downstream reasoning, analogous to PageRank. Consensus across
 independent syntheses is a stronger signal than source confidence alone.
 
-**Harness attribution** — every synthesis records the harness that produced
-it in `source.harness`, and the model in `source.model` where known. The
-observation this is assessed from is the retraction `kind`: a `defect` counts
-against the process that produced the claim, a `supersession` counts against
-nothing, and a `provenance-failure` counts against the cited document — which
-also makes the other claims citing that document identifiable as candidates
-for review. Recording who produced a claim is only half of it; without a
-record of whether they produced it correctly there is nothing to reason
-over.
+**Asserter attribution** — every synthesis records the harness that produced
+it in `source.harness`, and the model in `source.model` where known; every
+object whose `source.author` resolves records the particular that asserted
+it. The observation this is assessed from is the retraction `kind`: a
+`defect` counts against the process that produced the claim — the asserting
+particular and the harness; a `supersession` counts against nothing; and a
+`provenance-failure` counts against the cited document and, where one
+resolves, its `author` — which also makes the other claims citing that
+document, or reported from that person, identifiable as candidates for
+review. Recording who produced a claim is only half of it; without a record
+of whether they produced it correctly there is nothing to reason over. While
+authors were strings this was computable only per harness; it now applies
+to any person or agent, and nothing requires the count — implementations
+may report it.
 
 **Scope isolation** — claims whose effective scope is `personal` or
 `organisation` are never surfaced in public feeds. Effective scope is the
@@ -1084,8 +1180,18 @@ change before v0.1, folded in rather than deferred because declaring v0.1 is
 the invitation for a second implementation to appear, and breaking the format
 is cheap only while one exists.
 
-**Nothing remains open before v0.1 is declared.** Declaring it is a
-deliberate act, not a side effect of the last change landing.
+**v0.1 was declared on 2026-08-26** (tag `v0.1`). Nothing was left open
+before it, and declaring it was a deliberate act rather than a side effect of
+the last change landing.
+
+The first change after it is additive: `source.author` and a document's
+`author` are references to particulars, so who asserted a claim and who is
+being reported are structural rather than prose — see [Source](#source). No
+existing file changes validity and no existing reader changes its results.
+It touches three items deferred past v0.1 — DID binding for the reserved
+signature, promotion by particular, and whether a synthesis carries a
+`document` — and takes none of them; each is easier to decide now that an
+author has a URI.
 
 A reference implementation,
 [`particulars-cli`](https://github.com/nodelogicau/particulars-cli), exists
