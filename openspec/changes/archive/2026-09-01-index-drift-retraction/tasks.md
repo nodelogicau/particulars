@@ -11,6 +11,6 @@
 
 - [x] 3.1 Verify each scenario in `specs/` is answered by a normative sentence in README.md
 - [x] 3.2 Confirm both MODIFIED blocks copy their baseline text in full
-- [ ] 3.3 Comment on and close #22 when archived
-- [ ] 3.4 Add to `particulars-cli#7`: the masking form of the check and unknown-field preservation on rebuild
-- [ ] 3.5 Record in the dogfood workspace
+- [x] 3.3 Commented on and closed #22 (2026-09-01)
+- [x] 3.4 Added to `particulars-cli#7`: the masking form of the check and unknown-field preservation on rebuild
+- [x] 3.5 Recorded as particulars-knowledge#33
