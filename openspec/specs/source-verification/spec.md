@@ -7,7 +7,9 @@ Defines the structured document reference a claim may carry, the verbatim quote 
 ## Requirements
 
 ### Requirement: A document reference may be structured
-`source.document` MAY be either a string or a mapping with `ref` (required), `hash` (optional), and `quote` (optional). `ref` SHALL identify the source: a URI, a path resolved against the workspace root, or an identifier for a source that cannot be fetched at all, such as a conversation. Implementations MAY attempt to resolve a `ref` as a URI or as a workspace path, and where it resolves as neither the reference SHALL be treated as unverifiable rather than invalid — an unfetchable source may still carry a `quote`, which is provenance a reviewer can weigh. Readers SHALL accept `uri` as a legacy alias for `ref` and SHOULD warn, because a file carrying it can never be rewritten.
+`source.document` MAY be either a string or a mapping with `ref` (required), `author` (optional), `hash` (optional), and `quote` (optional), written in that order. `ref` SHALL identify the source: a URI, a path resolved against the workspace root, or an identifier for a source that cannot be fetched at all, such as a conversation. Implementations MAY attempt to resolve a `ref` as a URI or as a workspace path, and where it resolves as neither the reference SHALL be treated as unverifiable rather than invalid — an unfetchable source may still carry a `quote`, which is provenance a reviewer can weigh. Readers SHALL accept `uri` as a legacy alias for `ref` and SHOULD warn, because a file carrying it can never be rewritten.
+
+`author` SHALL identify who produced what was read, as a particular reference in the forms defined in `source-attribution`. It is distinct from `source.author`, which identifies who read it. An unresolvable `document.author` SHALL be reported as unresolved rather than invalid.
 
 `hash` SHALL be an algorithm-prefixed digest taken over the document with CRLF sequences normalised to LF and nothing else altered: not trailing whitespace, not Unicode form, not a final newline. Writers SHOULD write `sha256`; readers SHALL accept any `<algorithm>:<digest>` and SHALL report an unrecognised algorithm as unverified rather than invalid.
 
@@ -20,6 +22,14 @@ Defines the structured document reference a claim may carry, the verbatim quote 
 #### Scenario: Structured reference
 - **WHEN** a claim has a `document` mapping with `ref`, `hash`, and `quote`
 - **THEN** the claim is valid and the reference is eligible for drift checking
+
+#### Scenario: Reported testimony
+- **WHEN** a claim has a `document` mapping with `ref: conversation with Jane, 2026-08-30`, `author: urn:dkf:01a0…:jane`, and a `quote`
+- **THEN** the claim is valid, unverifiable, reported from Jane, and the quote stands as provenance
+
+#### Scenario: Field order in the mapping
+- **WHEN** an implementation writes a `document` mapping carrying all four fields
+- **THEN** they appear in the order `ref`, `author`, `hash`, `quote`
 
 #### Scenario: Workspace-relative reference
 - **WHEN** a `document` mapping has `ref: docs/architecture.md`
@@ -38,7 +48,7 @@ Defines the structured document reference a claim may carry, the verbatim quote 
 - **THEN** the reference is reported as unverified, and the claim is not rejected
 
 #### Scenario: Mapping without a reference
-- **WHEN** a `document` mapping carries `hash` and `quote` but no `ref`
+- **WHEN** a `document` mapping carries `author`, `hash` and `quote` but no `ref`
 - **THEN** validation fails
 
 #### Scenario: Line endings do not constitute drift

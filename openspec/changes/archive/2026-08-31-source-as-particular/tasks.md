@@ -39,5 +39,5 @@
 - [x] 6.2 Verify every scenario in `specs/` is answered by a normative sentence in README.md
 - [x] 6.3 Confirm no delta modifies a requirement that does not exist in the baseline (the four MODIFIED blocks copy their baseline text in full)
 - [x] 6.4 Update Status: this is the first post-v0.1 change, additive, and the deferrals it touches without taking — DID binding, promotion by particular, synthesis `document`
-- [ ] 6.5 Raise with the reference implementation before applying: `--author` accepting id/URI/name with write-time URI resolution, `--document-author`, `recall --author`, the two index fields, `author_ambiguous`, and the skill instruction that who-told-you goes in `--document-author`
+- [x] 6.5 Raised as particulars-cli#7. Asked for: `--author` accepting id/URI/name with write-time URI resolution, `--document-author`, `recall --author`, the two index fields, `author_ambiguous`, and the skill instruction that who-told-you goes in `--document-author`
 - [ ] 6.6 Record the decision in the dogfood workspace once applied, citing the deferral claims from PR #29 as inputs

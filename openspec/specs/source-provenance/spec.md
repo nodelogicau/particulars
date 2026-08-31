@@ -7,7 +7,7 @@ Defines the shared `source` block carried by claims, syntheses, retractions, and
 ## Requirements
 
 ### Requirement: `source` has one shape and a minimum content
-Claims, syntheses, retraction blocks, and merge records SHALL carry a `source` block with optional fields `author`, `harness`, `model`, and `document`. `document` MAY be a URI string or a structured reference as defined in `source-verification`. A `source` SHALL contain at least one of `author` or `harness`. Validators SHALL reject a `source` containing neither.
+Claims, syntheses, retraction blocks, and merge records SHALL carry a `source` block with optional fields `author`, `harness`, `model`, and `document`. `author` SHALL be a particular reference — a particular id, a particular URI, or a bare name — as defined in `source-attribution`; `harness` and `model` are strings. `document` MAY be a URI string or a structured reference as defined in `source-verification`. A `source` SHALL contain at least one of `author` or `harness`, and an `author` in any of its three forms satisfies that minimum whether or not it resolves. Validators SHALL reject a `source` containing neither.
 
 #### Scenario: Agent-only claim
 - **WHEN** a claim has `source: {harness: claude, model: claude-sonnet-4-6}` and no `author`
@@ -17,13 +17,17 @@ Claims, syntheses, retraction blocks, and merge records SHALL carry a `source` b
 - **WHEN** a claim has `source: {author: ben}`
 - **THEN** the claim is valid
 
+#### Scenario: Author as a URI
+- **WHEN** a claim has `source: {author: https://orcid.org/0000-0002-1825-0097}` and no `harness`
+- **THEN** the claim is valid, whether or not a particular with that URI exists
+
 #### Scenario: Empty source
 - **WHEN** a claim has `source: {document: https://…}` only
 - **THEN** validation fails
 
 #### Scenario: Structured document does not satisfy the minimum
-- **WHEN** a claim carries a structured `document` with `uri`, `hash` and `quote` but neither `author` nor `harness`
-- **THEN** validation fails, because a document is what was read and not who read it
+- **WHEN** a claim carries a structured `document` with `ref`, `author`, `hash` and `quote` but the `source` has neither `author` nor `harness`
+- **THEN** validation fails, because a document's author is who was read and not who read them
 
 ### Requirement: Syntheses carry `source` with a mandatory `harness`
 A synthesis SHALL carry `source` in the same shape as a claim, and its `source.harness` SHALL be present. The `produced-by` field SHALL NOT be used; `synthesis_create` SHALL accept this block as a parameter named `source`. Readers MAY treat a legacy `produced-by` block as `source` during v0.1.
