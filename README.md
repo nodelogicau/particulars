@@ -990,21 +990,37 @@ An implementation that rebuilds the index MUST **preserve** entries whose
 rebuild that dropped them would turn a read-compatibility gap into data loss
 in the cache, stripping (say) the promotion rows every time an older tool
 touched the workspace, with the loss surfacing only when a newer tool next
-computes effective scope from the index. For the same reason a drift check
-MUST NOT report unrecognised entry types as differences: a check must not
-fail on evidence of a newer conforming writer.
+computes effective scope from the index. The same holds one level down: on
+the entries it does regenerate, a rebuild preserves fields it does not
+recognise, so an older tool does not strip `author` from every entry. The
+stakes there are speed rather than truth — a stale index must never produce
+a wrong result — but a cache degraded silently is still degraded. For the
+same reason a drift check MUST NOT report unrecognised entry types or fields
+as differences: a check must not fail on evidence of a newer conforming
+writer.
 
 Implementations are expected to provide an operation that rebuilds the index
 from the files, and a check that reports — without modifying anything —
 whether the committed index has drifted from the files, suitable for CI.
-The check tolerates what the committed index could not have known: a field
-this specification marks MAY that is absent from a committed entry is not
-drift, so a newer implementation that writes `author` into entries does not
-fail every index committed before the field existed. A MAY field present on
-both sides with different values is drift, as is any missing or extra
-entry. This is the local form of the tolerance remote consumers already
-have — an index may lag the files — and it is generic, so the next MAY field
-costs nothing.
+The check exists to catch the index lagging *changes to the workspace*, and
+its tolerance follows from that rather than from which fields are optional.
+For a MAY field that mirrors an **immutable** property of the object —
+`scope`, `topics`, `timestamp`, `author`, `document-author` — a field
+present on one side and absent from the other is not drift, in either
+direction: the object cannot have changed, so the difference can only mean
+one writer predated the field. That is what lets a newer implementation
+write `author` into entries without failing every index committed before
+the field existed, and an older one check an index it cannot fully read.
+`retracted` is the exception, and the reason the rule is stated on
+immutability rather than on absence: it mirrors the one property of an
+object that *can* change after the index was written, and its absence is
+not ignorance but the value `false`. It is compared as present with that
+meaning, so a claim retracted after the index was committed is reported —
+which is the one staleness a drift check most exists to catch, and the case
+a rule about "absent MAY fields" would have exempted. A MAY field present
+on both sides with different values is drift, as is any missing or extra
+entry. The next MAY field classifies itself by asking whether what it
+mirrors can change.
 
 ---
 
