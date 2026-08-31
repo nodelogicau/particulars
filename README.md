@@ -123,12 +123,35 @@ happens when a file is read, which is what lets an existing workspace become
 attributable without a file changing: the moment a particular with alias
 `ben` is defined, every claim carrying `author: ben` is asserted by it.
 
-Writers prefer the URI. When the author is a defined particular, a writer
-writes its `uri` rather than its `par_` id; when given a bare name —
-including from `defaults.source.author` — that resolves to exactly one
-particular, it writes that particular's `uri`; on zero or several matches it
-writes the name unchanged. This is the one place the format prefers a URI
-over an id, and the asymmetry with `subject` is deliberate. A subject is a
+Writers prefer the URI, and are strict where they can be. When the author
+is a defined particular, a writer writes its `uri` rather than its `par_`
+id. An id that names no particular is refused — nobody is *called*
+`par_01a0…`, so it is a typo, as an unknown subject is. A URI is written
+unchanged whether or not a local particular carries it: an ORCID this
+workspace has never defined is the right identity of someone defined
+elsewhere, not an error. A bare name that resolves to exactly one particular
+is written as that particular's `uri`, and one that resolves to none is
+written unchanged, since a person not yet defined is legitimate. A bare
+name that resolves to *several* splits on who supplied it: given explicitly
+by the caller, it is refused with the candidates listed, exactly as subject
+resolution refuses, because the caller can pass a URI instead; taken from
+`defaults.source.author` or its equivalent, it is written unchanged and
+reported in aggregate, because failing there would block every write in the
+workspace until someone edits an alias, and a write is not where that should
+be discovered.
+
+Why write anything at all, when names resolve at read time? Because writing
+the resolved URI **freezes a resolution that was unambiguous at write
+time**. Define a second particular with alias `ben` next year and a claim
+written as `author: https://github.com/benfortuna` is still Ben's; a claim
+that kept the bare name is ambiguous from that day on, and being immutable
+it stays so until an alias is removed or a merge is written. Read-time
+resolution is for reaching back; write-time freezing is what stops the same
+mechanism degrading under later definitions. An id would freeze it too, but
+only inside the workspace — which is where the second argument takes over.
+
+This is the one place the format prefers a URI over an id, and the
+asymmetry with `subject` is deliberate. A subject is a
 workspace-local anchor whose file travels with the workspace, so a local id
 is the right key. An author is the one particular that recurs across
 workspaces: the same person has a different `par_` id in every workspace
@@ -150,15 +173,19 @@ documents](#verifiable-documents)). Both are computed over the merge
 equivalence class of the resolved particular. "Everything Jane said" is the
 union, but the halves mean different things about Jane: a defect in a claim
 she asserted is her misreading; a defect in a claim reported from her is the
-recorder's, and a provenance failure in one is hers.
+recorder's, and a provenance failure in one is hers. One object can stand in
+both relations — Ben recording his own earlier remark — and is then reported
+as both, never as one.
 
 A bare name that matches more than one particular resolves to **none of
 them**. Resolution never guesses: `particular_resolve` reports ambiguity
-with the candidates rather than choosing, and a validator reports an
-ambiguous author as `author_ambiguous` on the object — a finding, because an
-alias or a merge at that workspace clears it — while unresolved authors are
-reported in aggregate, because they recur on every claim until the
-particular is defined and can be cleared on none of them (see [Findings and
+with the candidates rather than choosing. A validator reports both author
+conditions as facts about the corpus, in aggregate: `author_ambiguous` with
+its count and the candidates — which are a property of the name, not the
+object, so the aggregate line can carry them — and `author_unresolved` with
+its count. Neither is reported per object, because the action that clears
+each — an alias or a merge, or defining the particular — is at the workspace
+and clears every occurrence at once (see [Findings and
 facts](#trust-and-provenance)).
 
 #### Verifiable documents
@@ -310,7 +337,13 @@ author is the one particular that recurs across workspaces and needs the
 same identity in each. A person's particular carries the URI they are
 willing to be cited under at the widest scope their claims may reach:
 particular files are never served in a feed, so that URI is the whole of
-what a public consumer learns about them.
+what a public consumer learns about them. For the same reason an
+implementation never mints a person's particular as a side effect — not on
+`init`, not when applying `defaults.source.author`, not when writing a
+claim. A minted `urn:dkf:…:ben` is opaque where `ben` was readable and,
+being workspace-local by construction, carries none of the cross-workspace
+identity that is the whole value of an author URI. Until the person defines
+themselves, their name is written unchanged and reported as unresolved.
 
 A URI must be **globally unique**. It is not required to be resolvable until
 the particular is published to `public` scope: most things an agent learns
@@ -964,6 +997,14 @@ fail on evidence of a newer conforming writer.
 Implementations are expected to provide an operation that rebuilds the index
 from the files, and a check that reports — without modifying anything —
 whether the committed index has drifted from the files, suitable for CI.
+The check tolerates what the committed index could not have known: a field
+this specification marks MAY that is absent from a committed entry is not
+drift, so a newer implementation that writes `author` into entries does not
+fail every index committed before the field existed. A MAY field present on
+both sides with different values is drift, as is any missing or extra
+entry. This is the local form of the tolerance remote consumers already
+have — an index may lag the files — and it is generic, so the next MAY field
+costs nothing.
 
 ---
 
@@ -996,7 +1037,7 @@ areas.
 
 | Tool | Description |
 |---|---|
-| `knowledge_recall(particular_id \| query, author?, scope, include_retracted, limit)` | Retrieve claims and syntheses about a particular or topic, or by `author` — an id, URI, label, or alias — returning objects asserted by or reported from that particular's merge class, each labelled which. Combinable with the other filters. Returns in lineage order, identifying `current`. Operates across merged particulars. |
+| `knowledge_recall(particular_id \| query, author?, scope, include_retracted, limit)` | Retrieve claims and syntheses about a particular or topic, or by `author` — an id, URI, label, or alias — returning objects asserted by or reported from that particular's merge class, each carrying `relations` — a set of `asserted` and/or `reported`, never empty. Combinable with the other filters. Returns in lineage order, identifying `current`. Operates across merged particulars. |
 | `conflict_detect(particular_id \| claim_ids[])` | Return the structural `current` / `unsynthesised` / `stale` sets and a suggested synthesis priority (see [Conflict semantics](#conflict-semantics)). Judging actual contradiction is left to the harness. |
 | `lineage_trace(claim_id, depth)` | Traverse the provenance chain of any claim or synthesis, including `superseded-by` successors. Returns a structured tree. |
 
@@ -1127,10 +1168,13 @@ synthesis wider than its inputs, an unverifiable defect, a dangling
 reference — and is reported per object, because the object is the unit of
 action. A *fact about the corpus* carries no per-object action — an
 `undeclared` evidential, a legacy compatibility marker, a document that
-cannot be verified — and is reported in aggregate: its discovery value is
-spent the first time it is seen, its cost recurs on every run, and it can
-never be cleared, because clearing it would mean rewriting an immutable
-file. An aggregate line carries a count always, and the condition's message
+cannot be verified, an author name that resolves to no particular or to
+several — and is reported in aggregate: its discovery value is spent the
+first time it is seen, its cost recurs on every run, and it cannot be
+cleared at any object — either because clearing it would mean rewriting an
+immutable file, or because the action that clears it is at the workspace and
+clears every occurrence at once. An aggregate line carries a count always,
+and the condition's message
 only when it is identical across the group — attributing one object's reason
 to ninety-five is misreporting. The format's design leans on warnings being
 read, so their legibility is load-bearing rather than cosmetic; a validator
