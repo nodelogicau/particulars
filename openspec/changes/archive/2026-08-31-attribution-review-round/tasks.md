@@ -30,6 +30,6 @@
 
 - [x] 7.1 Verify every scenario in `specs/` is answered by a normative sentence in README.md
 - [x] 7.2 Confirm the three MODIFIED blocks copy their baseline text in full
-- [ ] 7.3 Comment on #17–#21 with the resolution and close them when the change is archived
-- [ ] 7.4 Comment on `particulars-cli#7`: classification and refusals settled, `relations` a set, drift allowance instead of a CHANGELOG note, no minting in `init`; the skill line about when to pass `--author`
-- [ ] 7.5 Record the round in the dogfood workspace
+- [x] 7.3 Commented on and closed #17–#21 (2026-08-31)
+- [x] 7.4 Commented on `particulars-cli#7` (two comments, incl. the orphan_particular consequence): classification and refusals settled, `relations` a set, drift allowance instead of a CHANGELOG note, no minting in `init`; the skill line about when to pass `--author`
+- [x] 7.5 Recorded as particulars-knowledge#32
