@@ -14,6 +14,6 @@
 
 - [x] 3.1 Verify each scenario in `specs/` is answered by a normative sentence in README.md
 - [x] 3.2 Confirm the `workspace-config` MODIFIED block copies its baseline text in full
-- [ ] 3.3 Comment on and close #23: accepted; filename `dkf.md` and why; invalid path lenient and why; floor not ceiling; register in the tool table; resource MAY
-- [ ] 3.4 Add to `particulars-cli#7`: default renamed to `dkf.md`; invalid `workspace.conventions` warns instead of failing config validation; truncate on a character boundary; optional resource; README's stale "`.dkf` is an implementation extension"
-- [ ] 3.5 Record in particulars-knowledge
+- [x] 3.3 Commented on and closed #23 (2026-09-03): accepted; filename `dkf.md` and why; invalid path lenient and why; floor not ceiling; register in the tool table; resource MAY
+- [x] 3.4 Filed as `particulars-cli#8` (#7 had closed): default renamed to `dkf.md`; invalid `workspace.conventions` warns instead of failing config validation; truncate on a character boundary; optional resource; README's stale "`.dkf` is an implementation extension"
+- [x] 3.5 Recorded as particulars-knowledge#36
