@@ -836,6 +836,7 @@ and they change no conflict set.
 
 ```
 /dkf.yaml                      workspace marker and configuration
+/dkf.md                        optional conventions for agents — see below
 /.dkf                          optional pointer, when tools start elsewhere
 
 /particulars/
@@ -868,6 +869,7 @@ format: dkf/0.1
 workspace:
   id: 01916cb5-32a0-7001-90a6-6195d31a5bb6   # bare uuidv7; used in urn:dkf: URIs
   base-uri: https://example.com/particulars/  # optional; MUST end in '/'
+  conventions: TOPICS.md                      # optional; relative path inside the workspace; default dkf.md
 defaults:                                     # optional
   scope: personal
   source:
@@ -915,6 +917,52 @@ discoverable from inside it whether or not any pointer exists. The redirect is
 deliberately not a `dkf.yaml` with a `root:` key, because that file *is* the
 marker to every conformant reader, which would make the repository root look
 like an empty workspace.
+
+### `dkf.md`
+
+A workspace MAY carry a conventions document: prose addressed to the agents
+that write into it, saying what only the workspace can — which topic facets
+exist and which tags were retired, that this workspace reads feeds and never
+makes a feed a subject, what belongs in which scope. The generic discipline
+(recall before you assert, one falsifiable statement per claim, the subject
+is the world) travels with the tool; the workspace's own register does not,
+and this is its home. By default the document is `dkf.md` at the workspace
+root, the prose sibling of `dkf.yaml`; `workspace.conventions` names another
+file instead, as a relative path inside the workspace. A workspace with
+neither has no conventions, which is not a warning.
+
+The default is DKF-specific on purpose. A generic name — `CONVENTIONS.md`,
+`AGENTS.md` — can already exist for another reason at a repository root, and
+would be delivered to every knowledge session from the day a server first
+started without anyone having asked; `dkf.md` can only exist because someone
+meant it. `AGENTS.md` remains a good *value* for the key when the workspace
+directory is its own agent scope (`knowledge/AGENTS.md`), since harnesses that
+read the repository then pick it up with no DKF support at all.
+
+The document constrains nothing but the model. The specification does not
+constrain its content; no reader or validator derives behaviour from it — a
+stronger statement than for `defaults`, which writers at least consult — and
+it cannot relax a requirement of this specification: a `dkf.md` that says
+held claims carry a confidence here has written a wish, and an implementation
+that refuses the claim is conformant. What the format models structurally
+belongs in the format, not in the prose: authors are particulars resolved by
+label or alias, topics are on the index, and a table of the same facts in
+`dkf.md` would drift from them with nothing able to reconcile it. Conventions
+are for what the format does not model.
+
+`workspace.conventions` is checked **lexically**, on the cleaned path: an
+absolute path, or one whose first segment is `..`, is invalid. A relative path
+that happens to be a symlink elsewhere passes; the check is about the file
+travelling with the workspace, not a security boundary. An invalid value is
+treated as if the key were absent and reported as a warning — it never makes
+the workspace invalid. Readers that predate the key ignore it, so a strict
+rule would open the workspace under an older tool and refuse it under a newer
+one, which is the one-tool/next-tool inconsistency the blessed filename exists
+to prevent. (`base-uri` is strict because it changes what identifiers get
+minted; a conventions path changes nothing structural.)
+
+Keep it short: it rides in every session's context. How it gets there is
+described under [MCP Server Tools](#mcp-server-tools).
 
 ### `index.yaml`
 
@@ -1033,14 +1081,14 @@ areas.
 
 | Tool | Description |
 |---|---|
-| `particular_define(uri?, label, aliases[])` | Create or update a particular. Idempotent on URI. When `uri` is omitted one is minted from the label (see [Minting URIs](#minting-uris)). |
+| `particular_define(uri?, label, aliases[])` | Create or update a particular — a thing in the world, not a document being read; what was read belongs in `claim_assert`'s `source.document`. Idempotent on URI. Prefer an existing global URI that names an identity (a person's ORCID, a project's page), never reading matter. When `uri` is omitted one is minted from the label (see [Minting URIs](#minting-uris)). |
 | `particular_resolve(query)` | Find a particular by ID, URI, label, or alias. Returns null if no match; when a label or alias matches more than one particular, reports the candidates and resolves none. |
 
 ### Claim Tools
 
 | Tool | Description |
 |---|---|
-| `claim_assert(particular_id, content, evidential, source, context, confidence, scope)` | Create a new claim. `evidential` is required and has no default; `held` with a `confidence` is refused. If scope is omitted the workspace default (or `personal`) is written into the file. |
+| `claim_assert(particular_id, content, evidential, source, context, confidence, scope)` | Create a new claim. The subject is the thing in the world the fact is about — never the document or feed it was read in — and `content` states the fact; what was read belongs in `source.document`. `evidential` is required and has no default; `held` with a `confidence` is refused. If scope is omitted the workspace default (or `personal`) is written into the file. |
 | `claim_retract(claim_id, reason, source)` | Append a `retracted` block to a claim or synthesis. Never deletes — provenance is preserved. |
 
 ### Synthesis Tools
@@ -1071,6 +1119,33 @@ The typical LLM reasoning loop is:
 particular_resolve → knowledge_recall → conflict_detect
   → [reason internally] → synthesis_create
 ```
+
+### What the server tells the model
+
+A server bound to a workspace that carries a [conventions document](#dkfmd)
+SHOULD include its content in the `initialize` instructions, after the
+server's own generic guidance, under a heading naming the file — so the
+model meets the format's rules before the workspace's refinements, and knows
+where to read the rest if the text is cut. A prompt the server offers
+carrying its discipline SHOULD carry the same text. Several MCP clients never
+read the repository, and this is the only channel a workspace has to a model
+about to write into it; some never surface `instructions` either, so a server
+MAY additionally expose the document as a resource the client can attach. A
+configured document that cannot be read is a warning naming the file, never
+a startup failure.
+
+An implementation that limits how much it delivers MUST deliver at least the
+first 16 KiB of the document's UTF-8 encoding, MUST cut only on a character
+boundary, and MUST append a note saying the text was truncated and naming the
+file. The number is a floor, not a ceiling: it gives an author a budget they
+can rely on under any conformant server, and a server may deliver more.
+
+Tool descriptions are the one text guaranteed in the model's context at the
+moment it chooses a subject, which is why the rows above for `claim_assert`
+and `particular_define` state the register — the subject is the thing in the
+world, what was read goes in `source.document` — rather than leaving it to a
+document some clients never see. The conventions file is where a workspace
+escalates: "here, a feed is never a subject".
 
 ---
 
