@@ -261,25 +261,74 @@ insertion and reformatting, and it does something no offset can: it lets a
 reviewer audit the claim against its source while reading the pull request,
 with no tooling and no network.
 
+The stored quote is written as the writer gave it and is never normalised:
+the comparison folds whitespace (see *Drift*), the file does not. A quote
+that folds to nothing — empty, or whitespace only — would appear in every
+document and verify nothing, so a writer refuses it, as it would a
+`confidence` outside [0, 1]. A reader that meets one in a file treats the
+mapping as carrying no quote, verifies by hash alone, and warns, because the
+file cannot be rewritten. It is not quote drift: nothing happened to the
+source.
+
 #### Drift
 
 A structured reference can be checked later, and two signals matter rather
 than one: whether the quote still appears in the document, and whether the
 document still hashes the same.
 
+**A quote appears** in a document when, after folding both, the folded quote
+is a substring of the folded document. Folding replaces every run of
+characters carrying the Unicode `White_Space` property with a single space
+and trims the ends of the quote; it alters nothing else. Case, punctuation,
+and Unicode form are compared verbatim. The set is named as a property
+rather than listed because a list is where implementations part:
+`White_Space` includes the non-breaking space, the commonest artefact of
+text copied from a web page, and it is what `strings.Fields`, `str.split()`
+and `\s` already implement. Line endings need no separate rule, since a
+carriage return is whitespace.
+
+Whitespace is where the two signals part, and on purpose. The hash treats
+trailing whitespace as an edit; the quote treats it as nothing. The hash
+asks whether anything changed, the quote whether the words are still there,
+and a re-wrapped paragraph or a re-indented block has changed while its
+words have not — which is what the context-drift row exists to say. For
+everything other than whitespace the two agree about what an edit is: a
+curly quote for a straight one, NFC for NFD, a capital at a sentence start,
+each is an edit to both, so that when the signals disagree the disagreement
+means something.
+
 | quote | document hash | meaning |
 |---|---|---|
 | present | matches | nothing moved; the claim rests where it was |
 | present | differs | **context drift** — the text around the quote changed |
 | absent | differs | **quote drift** — the cited text is gone or altered |
+| absent | matches | **quote drift** — the quote never matched this document; it was miscopied or taken from another revision |
+| present | none | nothing the quote can see has moved; the hash is unverified |
+| absent | none | **quote drift**, with nothing to say about whether the document changed |
 
-The middle row is why hashing the quote alone is not enough. A document
+The context-drift row is why hashing the quote alone is not enough. A document
 reading "In staging, the billing service listens on 443" yields the claim
 "the billing service listens on 443"; changing *staging* to *production*
 falsifies the claim without touching a character of the quote. Hashing only
 the document catches it, at the cost of flagging every unrelated typo — so
 recording both is what separates "something moved near my claim" from
 "something moved somewhere in this file".
+
+The fourth row is the one a miscopied quote produces, and the one this
+format's original design called impossible, on the assumption that a quote
+is always taken from the bytes that were hashed. It says the quote was wrong
+when it was written, not that the document moved, and a report should say
+so: "the quote does not appear, though the document is unchanged" reads as
+a contradiction and sends a reader to check a file that never changed. The
+inference is available only when the hash matches. With no hash the quote
+is the whole signal, and its absence says nothing about the document.
+
+The rule is format-blind. Folding removes whitespace and nothing else, so it
+does not strip the `>` on a blockquote's continuation line, the `//` inside
+a wrapped code comment, or the `#` in wrapped YAML. A quote that spans such
+a wrap does not appear, and is taken from within one line instead. Teaching
+the rule a document's syntax would be the first of many edge cases on which
+implementations diverge, for a case a writer can avoid by hand.
 
 Drift is a condition for a reader to resolve, never a validation failure. A
 claim whose source has drifted stays valid, readable, and citable.
