@@ -10,6 +10,6 @@
 
 - [x] 2.1 Verify each scenario in `specs/source-verification/spec.md` is answered by a normative sentence in README.md, including the NBSP, block-scalar, blockquote, and empty-quote scenarios
 - [x] 2.2 Confirm both MODIFIED blocks copy their baseline requirement text in full, with every pre-existing scenario retained
-- [ ] 2.3 Comment on and close #24 (commented 2026-09-05 with the decisions below; close once the change is on main): accepted; the whitespace set is the `White_Space` property and why; "agrees with the hash" scoped to non-whitespace; the no-hash states named; the empty quote refused on write and read as no quote, and why not invalid; paragraph breaks fold; format-blind stated
+- [x] 2.3 Commented on and closed #24 (2026-09-05, landed as 48611fd): accepted; the whitespace set is the `White_Space` property and why; "agrees with the hash" scoped to non-whitespace; the no-hash states named; the empty quote refused on write and read as no quote, and why not invalid; paragraph breaks fold; format-blind stated
 - [x] 2.4 Filed as particulars-cli#10: name the property rather than listing whitespace kinds in its delta spec and docs; read a quote that folds to nothing as no quote with a warning rather than reporting `quote_drift`; refuse it at `claim assert` and `claim_assert`
-- [ ] 2.5 Record in particulars-knowledge: a qualification synthesis over the #24 claim and the 2026-08-25 two-signal drift claim, once the change is archived
+- [x] 2.5 Recorded in particulars-knowledge#38: acceptance claim clm_01a07138-4619-7a06-8c3a-ce9790912425 and qualification synthesis syn_01a07138-4691-7d84-b58f-b6231fd9d752 over the #24 claim and the 2026-08-25 two-signal drift claim
