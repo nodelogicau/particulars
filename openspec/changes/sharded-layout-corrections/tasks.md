@@ -22,5 +22,5 @@
 
 - [x] 4.1 Verify each scenario across the three delta specs is answered by a normative sentence in README.md, including the draft-era id, the retraction-only month, the retraction dated into a sealed month, and the legacy-object filtering cost
 - [x] 4.2 Confirm every MODIFIED block copies its baseline requirement text in full with every pre-existing scenario retained
-- [ ] 4.3 Comment on and close #25 (reserved `legacy` shard and segment, trigger "no month derives") and #26 (tombstones keyed by retraction month, carried in that month's segment; why over per-minting-month or a stated ceiling)
-- [ ] 4.4 Record in particulars-knowledge: a claim qualifying the `sharded-layout` claim of 2026-09-10 with the corrected tombstone shape, the legacy shard, and the two withdrawn statements
+- [x] 4.3 Commented on and closed #25 (2026-09-11, landed as 1554842) (reserved `legacy` shard and segment, trigger "no month derives") and #26 (tombstones keyed by retraction month, carried in that month's segment; why over per-minting-month or a stated ceiling)
+- [x] 4.4 Recorded in particulars-knowledge#39 as clm_01a08bba-53d2-7493-bee1-11491a3025fe: a claim qualifying the `sharded-layout` claim of 2026-09-10 with the corrected tombstone shape, the legacy shard, and the two withdrawn statements
