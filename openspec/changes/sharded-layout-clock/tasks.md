@@ -12,6 +12,6 @@
 
 - [x] 3.1 Verify each scenario across the three delta specs is answered by a normative sentence in README.md, including the retraction-dated-ahead, mint-between, future-dated-retraction, and skewed-id scenarios
 - [x] 3.2 Confirm every MODIFIED block copies its baseline requirement text in full with every pre-existing scenario retained; confirm the ADDED requirement has scenarios
-- [ ] 3.3 Comment on and close #27: single clock rather than bounding mints by the current month, and why (no refusal for another machine's clock; a typo degrades to a visible wait rather than a sealed year); upper bound on retraction timestamps taken; validator warning added; README bound corrected
+- [x] 3.3 Commented on and closed #27 (2026-09-11, landed as 2839fdc): single clock rather than bounding mints by the current month, and why (no refusal for another machine's clock; a typo degrades to a visible wait rather than a sealed year); upper bound on retraction timestamps taken; validator warning added; README bound corrected
 - [x] 3.4 Commented on particulars-cli#11 (2026-09-11): stage 2's current-month rule is single-clock; `retract` refuses a future timestamp; `validate` warns on future-dated ids and timestamps
-- [ ] 3.5 Record in particulars-knowledge: a claim qualifying the 2026-09-11 corrections claim with the single-clock rule and the two bounds
+- [x] 3.5 Recorded in particulars-knowledge#39 as clm_01a08d4d-6dbb-7e30-a0ae-550570a08c9b: a claim qualifying the 2026-09-11 corrections claim with the single-clock rule and the two bounds
