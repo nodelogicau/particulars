@@ -7,7 +7,7 @@ Defines `dkf.yaml`, the file that marks a DKF workspace root and carries its ide
 ## Requirements
 
 ### Requirement: `dkf.yaml` marks and configures a workspace
-A DKF workspace SHALL be identified by a `dkf.yaml` file at its root containing at minimum `format: dkf/0.1` and `workspace.id` (a bare lowercase UUIDv7). It MAY contain `workspace.base-uri` (which, if present, SHALL end in `/`), `workspace.conventions` (a relative path inside the workspace naming the conventions document defined in `agent-guidance`), and a `defaults` block with `scope` and `source`. Implementations SHALL ignore unknown keys. The validity of `workspace.conventions` SHALL be checked lexically on the cleaned path: an absolute path, or one whose first segment is `..`, is invalid. An invalid value SHALL be treated as if the key were absent and reported as a warning; it SHALL NOT make the workspace invalid.
+A DKF workspace SHALL be identified by a `dkf.yaml` file at its root containing at minimum `format` and `workspace.id` (a bare lowercase UUIDv7). `format` SHALL be `dkf/0.1`, naming the flat layout, or `dkf/0.2`, naming the sharded layout defined in `workspace-layout`. A reader SHALL refuse to open a workspace whose `format` names a version it does not implement, and SHALL report the version it found; it SHALL NOT open the workspace and read what it can. It MAY contain `workspace.base-uri` (which, if present, SHALL end in `/`), `workspace.conventions` (a relative path inside the workspace naming the conventions document defined in `agent-guidance`), and a `defaults` block with `scope` and `source`. Implementations SHALL ignore unknown keys. The validity of `workspace.conventions` SHALL be checked lexically on the cleaned path: an absolute path, or one whose first segment is `..`, is invalid. An invalid value SHALL be treated as if the key were absent and reported as a warning; it SHALL NOT make the workspace invalid.
 
 #### Scenario: Minimal workspace file
 - **WHEN** `dkf.yaml` contains only `format` and `workspace.id`
@@ -33,6 +33,17 @@ A DKF workspace SHALL be identified by a `dkf.yaml` file at its root containing 
 - **WHEN** `workspace.conventions` is invalid and the workspace is opened by an implementation that predates the key and by one that implements it
 - **THEN** both open the workspace
 
+#### Scenario: A `dkf/0.2` workspace
+- **WHEN** `dkf.yaml` says `format: dkf/0.2` and the reader implements it
+- **THEN** the workspace opens with the sharded layout
+
+#### Scenario: A version the reader does not implement
+- **WHEN** `dkf.yaml` says `format: dkf/0.3` and the reader implements only `dkf/0.1` and `dkf/0.2`
+- **THEN** the reader refuses to open the workspace and its error names `dkf/0.3`
+
+#### Scenario: A `dkf/0.1` workspace remains valid
+- **WHEN** `dkf.yaml` says `format: dkf/0.1`
+- **THEN** a reader implementing `dkf/0.2` opens it with the flat layout, and nothing requires it to migrate
 ### Requirement: Workspace discovery walks up from the working directory
 Implementations SHALL locate the workspace by searching the current directory and each ancestor. At each directory, a `dkf.yaml` SHALL make that directory the workspace; otherwise a `.dkf` pointer file, if present, SHALL redirect to the workspace it names. Explicit configuration — a workspace argument, then an environment variable — SHALL take precedence over discovery entirely.
 
