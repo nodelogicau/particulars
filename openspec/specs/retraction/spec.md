@@ -25,7 +25,7 @@ The `retracted` block SHALL be valid on claims, syntheses, and merge records ali
 - **THEN** consumers treat it as retracted for recall and conflict purposes, and it is no longer eligible to be `current`
 
 ### Requirement: The index mirrors retraction
-When an object is retracted, the index SHALL record it: in a `dkf/0.1` index, its entry SHALL carry `retracted: true`; in a `dkf/0.2` index, its id SHALL appear in the `retracted` list of the root index for the current month, and later, when that month seals, in the `retracted` list of that month's segment. Its entry SHALL be unchanged wherever it sits, so that no sealed segment is rewritten. A retraction's `timestamp` SHALL NOT fall in a month earlier than the workspace's current month.
+When an object is retracted, the index SHALL record it: in a `dkf/0.1` index, its entry SHALL carry `retracted: true`; in a `dkf/0.2` index, its id SHALL appear in the `retracted` list of the root index, which holds every retraction dated in the current month or later, and later, when the month of its `timestamp` seals, in the `retracted` list of that month's segment. Its entry SHALL be unchanged wherever it sits, so that no sealed segment is rewritten. A retraction's `timestamp` SHALL NOT fall in a month earlier than that of the newest id in the workspace, and SHALL NOT be later than the writer's clock.
 
 #### Scenario: Filtering without opening files
 - **WHEN** `knowledge_recall` is called with `include_retracted: false`
@@ -36,8 +36,12 @@ When an object is retracted, the index SHALL record it: in a `dkf/0.1` index, it
 - **THEN** `index.yaml`'s `retracted` list gains the id and `index/2026-08.yaml` does not change
 
 #### Scenario: The retraction seals with its month
-- **WHEN** that retraction's month, October 2026, later seals
-- **THEN** the id moves from the root's `retracted` into `index/2026-10.yaml`'s `retracted`, and the root's list holds only the new current month
+- **WHEN** that retraction's month, October 2026, later seals because an id is minted in a later month
+- **THEN** the id moves from the root's `retracted` into `index/2026-10.yaml`'s `retracted`, and the root's list holds only retractions dated in the new current month or later
+
+#### Scenario: A retraction dated ahead waits in the root
+- **WHEN** a retraction is dated in December 2026 while the newest id is from October 2026
+- **THEN** its id sits in the root's `retracted` through October and November, and seals into `index/2026-12.yaml` when a later month's id is minted
 ### Requirement: `superseded-by` points at an existing claim or synthesis
 A `retracted.superseded-by` value, when present, SHALL be the id of an existing claim or synthesis. Validators SHALL reject a dangling target. The pointer is informational for readers and `lineage_trace`; it SHALL NOT make the target an input of anything and SHALL NOT count as synthesis for conflict detection.
 

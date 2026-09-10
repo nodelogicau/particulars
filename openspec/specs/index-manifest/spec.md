@@ -97,7 +97,7 @@ Implementations SHALL provide an operation that regenerates the index from the f
 - **WHEN** a file under `claims/2026-08/` carries a `retracted.timestamp` in August 2026 and the committed `index/2026-08.yaml` does not list it
 - **THEN** the check reports the segment, and the retraction is treated as written in violation of the guard
 ### Requirement: The index is a hot tail, sealed segments, and a tombstone list
-In a `dkf/0.2` workspace, `index.yaml` SHALL carry `format`, `segments` (a list of paths, relative to `index.yaml`: `index/legacy.yaml` first if it exists, then one per sealed month in ascending order), `entries` (the entries of objects minted in the current month), and `retracted` (the ids, sorted, of objects whose `retracted.timestamp` falls in the current month, whatever month they were minted in). Each month's segment SHALL be at `index/<YYYY-MM>.yaml` and SHALL carry `format`, `entries` for objects minted in that month, and `retracted` for objects retracted in that month. `index/legacy.yaml` SHALL carry `format` and `entries` for objects whose ids derive no month, and no `retracted`. The current month SHALL be the later of the month of the newest id in the workspace and the month of the newest `retracted.timestamp`, so that a rebuild is a function of the files alone; a month with retractions and no mints yields a segment with an empty `entries`. A sealed segment SHALL NOT change once written; `index/legacy.yaml` is not sealed and a change to it is drift. Entries SHALL NOT carry `retracted`; the per-month lists are the sole index record of retraction. Because an object cannot be retracted before it is minted, an object minted in month M is retracted if and only if its id appears in `retracted` of the root or of a segment for month M or later.
+In a `dkf/0.2` workspace, `index.yaml` SHALL carry `format`, `segments` (a list of paths, relative to `index.yaml`: `index/legacy.yaml` first if it exists, then one per sealed month in ascending order), `entries` (the entries of objects minted in the current month), and `retracted` (the ids, sorted, of objects whose `retracted.timestamp` falls in the current month or any later month, whatever month they were minted in). Each month's segment SHALL be at `index/<YYYY-MM>.yaml` and SHALL carry `format`, `entries` for objects minted in that month, and `retracted` for objects retracted in that month. `index/legacy.yaml` SHALL carry `format` and `entries` for objects whose ids derive no month, and no `retracted`. The current month SHALL be the month of the newest id in the workspace, and nothing else, so that a rebuild is a function of the files alone and sealing is driven by mints alone; a month earlier than the current month with retractions and no mints yields a segment with an empty `entries`, and a month with neither yields no segment. A sealed segment SHALL NOT change once written; `index/legacy.yaml` is not sealed and a change to it is drift. Entries SHALL NOT carry `retracted`; the per-month lists are the sole index record of retraction. Because an object cannot be retracted before it is minted, an object minted in month M is retracted if and only if its id appears in `retracted` of the root or of a segment for month M or later, a check whose cost is proportional to the months elapsed since M.
 
 #### Scenario: Shape of the root index
 - **WHEN** a workspace holds objects minted in August and September 2026, the newest id is from September, and one August object was retracted in September
@@ -105,15 +105,15 @@ In a `dkf/0.2` workspace, `index.yaml` SHALL carry `format`, `segments` (a list 
 
 #### Scenario: Month rollover
 - **WHEN** the first object of October 2026 is minted and the index is rebuilt
-- **THEN** September's entries and September's retractions move into a new `index/2026-09.yaml`, `segments` gains that path, and `entries` and `retracted` in the root hold only October
+- **THEN** September's entries and September's retractions move into a new `index/2026-09.yaml`, `segments` gains that path, `entries` in the root holds only October, and `retracted` in the root holds retractions dated October or later
 
 #### Scenario: A rebuild is deterministic
 - **WHEN** two implementations rebuild the index of the same files on different days
-- **THEN** they produce the same root document and the same segments, because the current month follows the newest id and the newest retraction timestamp, not the clock
+- **THEN** they produce the same root document and the same segments, because the current month follows the newest id and not the clock
 
 #### Scenario: A retraction touches only the root
 - **WHEN** a claim whose entry is in `index/2026-08.yaml` is retracted in October 2026
-- **THEN** its id is added to `retracted` in `index.yaml`, `index/2026-08.yaml` is byte-identical to before, and the root holds only October's retractions
+- **THEN** its id is added to `retracted` in `index.yaml`, `index/2026-08.yaml` is byte-identical to before, and the root holds only retractions dated October or later
 
 #### Scenario: Filtering retracted objects from the index
 - **WHEN** `knowledge_recall` is called with `include_retracted: false` over objects minted in August 2026
@@ -138,3 +138,11 @@ In a `dkf/0.2` workspace, `index.yaml` SHALL carry `format`, `segments` (a list 
 #### Scenario: The legacy segment
 - **WHEN** a workspace holds a claim with id `clm_07m3zp9s2q1r4t8v`
 - **THEN** its entry is in `index/legacy.yaml`, which is the first path under `segments`, and if it is retracted its id is in the `retracted` list of the month of its retraction
+
+#### Scenario: A retraction dated ahead of the newest mint
+- **WHEN** the newest id is from October 2026 and a retraction is dated in December 2026
+- **THEN** the root's `retracted` carries it while October remains the current month, a November mint seals October without it, and it seals into `index/2026-12.yaml` only when a January 2027 or later id is minted
+
+#### Scenario: A mint between the newest id and a retraction dated ahead
+- **WHEN** the newest id is from October 2026, a retraction is dated in December 2026, and an object is minted in November 2026
+- **THEN** the mint is legal, October seals, November becomes the current month, and no sealed segment changes
