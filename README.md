@@ -893,13 +893,17 @@ appending an object, checking the index for drift, and enumerating what
 changed since a point must each cost in proportion to what they touch. A
 proposed layout or index shape is judged against that.
 
-The numbers that made it a rule: a single-document index of 105,000 entries
-parses in 1.3 s and peaks at 700 MB resident, about 6.7 KB per entry, so a
-million-entry workspace would need 7 GB to answer any question; a flat
-`claims/` directory has its whole git tree object rewritten on every commit
-that adds a claim; and hosted directory listings truncate at a thousand
-files, which a workspace adding fourteen objects a day reaches in two
-months. None of these is a filesystem limit — APFS and NTFS are effectively
+The numbers that made it a rule: parsing a single-document index of 105,000
+entries, with no object files beside it, takes 1.3 s and peaks at 700 MB
+resident, about 6.7 KB per entry — and that is the index alone. A full
+drift check over real object files, which rebuilds before it compares,
+measured on the implementation side at about 29 KB per entry at the margin
+(particulars-cli#11), so a million-object workspace is tens of gigabytes to
+check. The two figures measure different things and agree on the one that
+matters: the cost is linear in history. A flat `claims/` directory has its
+whole git tree object rewritten on every commit that adds a claim; and
+hosted directory listings truncate at a thousand files, which a workspace
+adding fourteen objects a day reaches in two months. None of these is a filesystem limit — APFS and NTFS are effectively
 unbounded, ext4 handles millions per directory. They are limits of the
 shapes, and shapes can be chosen.
 
@@ -935,9 +939,12 @@ shapes, and shapes can be chosen.
 /publishes/
   2026-09/
     pub_01a0f3c1-4d20-7b8e-9a11-6c2f4e7d9b03.yaml
+  legacy/                      only if ids exist from which no month derives
+    clm_07m3zp9s2q1r4t8v.yaml
 
 /index.yaml                    derived cache: the current month — see below
 /index/
+  legacy.yaml                  entries for legacy ids, only if any exist
   2024-08.yaml                 sealed segments, one per earlier month
   2024-11.yaml
   2026-08.yaml
@@ -975,11 +982,33 @@ file within it can still change in the one way any object file can, by
 gaining a `retracted` block. Implementations must not mint an id into an
 earlier month than the newest id in the workspace; a machine with a clock
 skewed by a month would, and the drift check reports the segment it
-disturbs, which is the right outcome. A file that sits in a month its id
-does not derive, or directly in a type directory of a `dkf/0.2` workspace,
-is not an object in the wrong place but a validation failure naming the
-file and the path its id derives: a reader never guesses the layout from
-what it finds on disk.
+disturbs, which is the right outcome. The same guard applies to
+retractions, for the same reason: a `retracted` block is keyed into the
+index by the month of its `timestamp` (see `index.yaml` below), so an
+implementation must not write one dated into an earlier month than the
+workspace's current month. A retraction that was decided last month is
+recorded with a timestamp of now and a `reason` that says when — the reason
+field is where that belongs. A file that sits in a month its id does not
+derive, or directly in a type directory of a `dkf/0.2` workspace, is not an
+object in the wrong place but a validation failure naming the file and the
+path its id derives: a reader never guesses the layout from what it finds on
+disk.
+
+One shard is not a month. Readers must accept any id matching the format's
+lenient pattern, including the draft's truncated ULIDs, and such an id
+carries no timestamp: no month derives from it. It lives at
+`<type-dir>/legacy/<id>.yaml`, and its index entry in `index/legacy.yaml`.
+The trigger is the derivation failing — an identifier part that is not a
+UUID, or a UUID of a version other than 7 — so the rule needs no list of
+legacy forms; a UUIDv7 with an implausible timestamp still derives a month
+and goes there. `legacy` cannot collide with a `YYYY-MM`, the path stays a
+function of the id alone, and the stray-file rule stays absolute. The
+directory is never sealed — nothing minted its contents, so nothing can
+seal them — and no conformant writer adds to it, since writers mint only
+UUIDv7; a legacy id can arrive only by copy, merge, or a non-conformant
+writer, and a rebuild that finds one reports the difference as ordinary
+drift. It is called `legacy` rather than `unknown` because the directory
+name should say why the files are there.
 
 ### `dkf.yaml`
 
@@ -1011,10 +1040,10 @@ leniency that lets an older reader survive a new field or a new entry type
 says nothing about a new layout, and an older reader meeting one would not
 fail but glob `claims/*.yaml`, find nothing, and report a small workspace as
 a whole one. Partial and silent is worse than refused, and `format` is the
-one thing every reader reads first. Honestly stated: a `dkf/0.1` reader
-written before this rule may accept `dkf/0.2` and misread. One such reader
-exists, the reference implementation, and it is updated with the rule; every
-reader from now on is bound. A `dkf/0.2` reader reads both layouts, and no
+one thing every reader reads first. The rule states what the reference
+implementation has done since its first commit — it refuses any `format` it
+does not implement, on every verb, naming the version it found — and what
+every reader must share. A `dkf/0.2` reader reads both layouts, and no
 workspace is obliged to migrate.
 
 `defaults` are applied by **writers only**, when a tool call omits a value:
@@ -1119,25 +1148,26 @@ directory — for them it is the enumeration mechanism, and they should treat it
 as potentially lagging the files.
 
 ```yaml
-# index.yaml — the root: the current month, the segments, the tombstones
+# index.yaml — the root: the segments, and the current month's mints and retractions
 format: dkf/0.2
 segments:
+  - index/legacy.yaml
   - index/2024-08.yaml
   - index/2024-11.yaml
   - index/2026-08.yaml
-entries:
+entries:                       # minted this month
   - id: pub_01a0f3c1-4d20-7b8e-9a11-6c2f4e7d9b03
     type: publish
     scope: public
     claims:
       - clm_01916f03-b680-71a3-974f-9401ba374e1f
       - syn_01933034-b1a0-705f-b788-2c7c58c46e29
-retracted:
+retracted:                     # retracted this month, whenever minted
   - clm_01a01ed5-c040-73b0-ba7b-da8a27ab53a6
 ```
 
 ```yaml
-# index/2024-08.yaml — a sealed segment: format and that month's entries, nothing else
+# index/2024-08.yaml — a sealed segment: that month's mints and that month's retractions
 format: dkf/0.2
 entries:
   - id: par_01916f03-b680-71a2-bad4-40b49d5a5a6d
@@ -1150,6 +1180,16 @@ entries:
     topics: [architecture, distributed-systems]
     timestamp: 2024-08-20T09:00:00Z
     author: https://orcid.org/0000-0002-1825-0097
+retracted: []
+```
+
+```yaml
+# index/legacy.yaml — entries for ids from which no month derives; never sealed, never retracted here
+format: dkf/0.2
+entries:
+  - id: clm_07m3zp9s2q1r4t8v
+    type: claim
+    subject: par_01916f03-b680-71a2-bad4-40b49d5a5a6d
 ```
 
 ```yaml
@@ -1166,29 +1206,49 @@ entries:
     uris:
       - https://example.com/particulars/project-x
       - urn:dkf:01916cb5-32a0-7001-90a6-6195d31a5bb6:projectx
+retracted: []
 ```
 
-The **current month is the month of the newest id** in the workspace, not
-the clock, so a rebuild is a function of the files alone: two
-implementations rebuilding on different days produce the same root and the
-same segments. On the first rebuild after a new month's first object is
-minted, the previous month's entries move out of `entries` into a new
+The **current month is the later of the month of the newest id and the
+month of the newest `retracted.timestamp`** in the workspace, not the clock,
+so a rebuild is a function of the files alone: two implementations
+rebuilding on different days produce the same root and the same segments.
+On the first rebuild after a new month's first mint or retraction, the
+previous month's entries and retractions move out of the root into a new
 segment, `segments` gains its path, and the tail starts again — one large
-diff a month, the shape of a log rotating. A segment is itself a valid index
-document, `format` and `entries` and nothing else, and once sealed it never
-changes. Segment paths are relative to `index.yaml`.
+diff a month, the shape of a log rotating. A month in which objects were
+retracted but none minted yields a segment with an empty `entries`, which
+is correct and slightly odd; a month with neither yields no segment. A
+segment is itself a valid index document, `format`, `entries` and
+`retracted` and nothing else, and once sealed it never changes.
+`index/legacy.yaml` carries `format` and `entries` only and is listed first.
+Segment paths are relative to `index.yaml`.
 
-`retracted` is why. Retraction is the one property of an object that changes
-after its entry was written, and `retracted: true` on the entry was the one
-mutable field in the index — the one thing that would force a sealed segment
-to be rewritten. Moving it to a list in the root makes every segment
-byte-immutable once sealed, which is what lets git leave its tree alone and
-lets a remote consumer fetch a segment once, cache it forever, and poll only
-the root. The list is complete — every retracted id, including ones whose
-entry is still in the tail — so there is one place to look, and
-`knowledge_recall` with `include_retracted: false` still filters without
-opening a file. In a `dkf/0.1` index the flag stays on the entry, and a
-`dkf/0.2` reader honours it there.
+`retracted` is why, and *when* is the key. Retraction is the one property of
+an object that changes after its entry was written, and `retracted: true`
+on the entry was the one mutable field in the index — the one thing that
+would force a sealed segment to be rewritten. A single list in the root
+fixes that and creates the opposite problem: every retraction ever, in the
+one document every append rewrites, so an append grows with the history of
+retractions — which the principle above forbids. Keying each tombstone by
+the month the retraction *happened*, and carrying it in that month's
+segment, fixes both. Appending and retracting each rewrite the root, and
+the root holds one month's worth of each; nothing rewritten grows with
+history. Every sealed segment is byte-immutable without exception, which
+is what lets git leave its tree alone and lets a remote consumer fetch a
+segment once and cache it forever. "What changed since my last visit" is
+the root plus the segments newer than that visit — objects minted and
+objects retracted, both, in one read. And filtering is bounded by the
+period filtered: an object cannot be retracted before it is minted, so an
+object minted in month M is retracted if and only if its id is in the
+`retracted` of the root or of a segment for M or later. `knowledge_recall`
+with `include_retracted: false` over this month reads the root; over
+everything it reads everything, which is what everything costs. The one
+exception is a legacy object, which has no M: checking whether it is
+retracted means reading every list, a cost accepted because no conformant
+writer creates such objects and their number is fixed at migration. In a
+`dkf/0.1` index the flag stays on the entry, and a `dkf/0.2` reader honours
+it there.
 
 Baseline fields: every entry has `id` and `type`; particulars have `uri`;
 claims and syntheses have `subject`; syntheses have `inputs`; merges have
@@ -1197,7 +1257,7 @@ claims and syntheses have `subject`; syntheses have `inputs`; merges have
 mirroring the object's `source.author` and `source.document.author` as
 written — so that `knowledge_recall` can filter without opening files. In a
 `dkf/0.1` index an entry MAY also carry `retracted: true`; in `dkf/0.2` it
-MUST NOT, retraction living in the root's list.
+MUST NOT, retraction living in the `retracted` list of the month it happened.
 Implementations MAY add further fields, and future versions of this
 specification MAY add further entry types; consumers MUST ignore fields and
 entries they do not understand.
@@ -1219,11 +1279,12 @@ writer.
 Implementations are expected to provide an operation that rebuilds the index
 from the files, and a check that reports — without modifying anything —
 whether the committed index has drifted from the files, suitable for CI. In
-`dkf/0.2` the check is per document: the root's `entries` against a
-regenerated tail, each segment against its regenerated self — from that
-month's files alone, so a sealed segment costs its own size and not the
-workspace's — and the `retracted` list against a regenerated list, an id in
-one and not the other being drift; a segment listed and absent, or present
+`dkf/0.2` the check is per document: the root against a regenerated tail,
+each month's segment against its regenerated self — from that month's mints
+and that month's retractions alone, so a sealed segment costs its own size
+and not the workspace's — and `index/legacy.yaml` against its own; in each
+document both `entries` and `retracted` are compared, an id in one list and
+not the other being drift; a segment listed and absent, or present
 and unlisted, is drift too. The check exists to catch the index lagging *changes to the workspace*, and
 its tolerance follows from that rather than from which fields are optional.
 For a MAY field that mirrors an **immutable** property of the object —
@@ -1249,8 +1310,9 @@ not on the entry.
 ### Migration
 
 A `dkf/0.1` workspace becomes `dkf/0.2` by moving each object and record
-file to the path its id derives, regenerating the index in the new shape,
-and rewriting `format` in `dkf.yaml`. Nothing else changes: no id, no field,
+file to the path its id derives — a month directory, or `legacy/` for an id
+from which no month derives, its id unchanged — regenerating the index in
+the new shape, and rewriting `format` in `dkf.yaml`. Nothing else changes: no id, no field,
 no `source`, no `retracted` block, no canonical payload, so every signature
 that verified before verifies after, and git records the moves as renames
 with full history. A migration that changed any payload has not been done
