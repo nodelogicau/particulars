@@ -983,12 +983,23 @@ gaining a `retracted` block. Implementations must not mint an id into an
 earlier month than the newest id in the workspace; a machine with a clock
 skewed by a month would, and the drift check reports the segment it
 disturbs, which is the right outcome. The same guard applies to
-retractions, for the same reason: a `retracted` block is keyed into the
+retractions, against the same bound: a `retracted` block is keyed into the
 index by the month of its `timestamp` (see `index.yaml` below), so an
 implementation must not write one dated into an earlier month than the
-workspace's current month. A retraction that was decided last month is
-recorded with a timestamp of now and a `reason` that says when — the reason
-field is where that belongs. A file that sits in a month its id does not
+newest id's month. The bound is the newest id's month and not anything
+else on purpose — sealing is driven by mints alone, so a write that passes
+its guard always has an unsealed home, and two writers whose clocks
+disagree can never leave the index in a state a rebuild cannot reproduce.
+A retraction that was decided last month is recorded with a timestamp of
+now and a `reason` that says when — the reason field is where that belongs.
+Nor may a retraction be dated later than the writer's own clock: no honest
+recording is in the future, and the upper bound costs nothing while
+stopping the one plausible way of putting a tombstone a year ahead, a typo.
+Writer rules bind writers; a validator has a clock too, and should warn —
+never fail — on any id minted, or object or retraction timestamp dated,
+later than now, naming the object. A warning because the validator's clock
+may be the wrong one, and because nothing structural is broken: a
+future-dated object still has exactly one derived home. A file that sits in a month its id does not
 derive, or directly in a type directory of a `dkf/0.2` workspace, is not an
 object in the wrong place but a validation failure naming the file and the
 path its id derives: a reader never guesses the layout from what it finds on
@@ -1209,14 +1220,19 @@ entries:
 retracted: []
 ```
 
-The **current month is the later of the month of the newest id and the
-month of the newest `retracted.timestamp`** in the workspace, not the clock,
-so a rebuild is a function of the files alone: two implementations
-rebuilding on different days produce the same root and the same segments.
-On the first rebuild after a new month's first mint or retraction, the
-previous month's entries and retractions move out of the root into a new
-segment, `segments` gains its path, and the tail starts again — one large
-diff a month, the shape of a log rotating. A month in which objects were
+The **current month is the month of the newest id** in the workspace, and
+nothing else — not the clock, and not any retraction's timestamp — so a
+rebuild is a function of the files alone: two implementations rebuilding on
+different days produce the same root and the same segments. The root's
+`retracted` holds every retraction dated in the current month *or later*: a
+retraction dated ahead of the newest mint waits in the root, visibly, until
+a mint passes its month, and only then seals into that month's segment.
+Sealing is driven by mints alone, which is what lets the minting guard and
+the retraction guard bound against one quantity. On the first rebuild
+after a later month's first mint, the previous month's entries and its
+retractions move out of the root into a new segment, `segments` gains its
+path, and the tail starts again — one large diff a month, the shape of a
+log rotating. A month earlier than the current one in which objects were
 retracted but none minted yields a segment with an empty `entries`, which
 is correct and slightly odd; a month with neither yields no segment. A
 segment is itself a valid index document, `format`, `entries` and
@@ -1239,11 +1255,17 @@ is what lets git leave its tree alone and lets a remote consumer fetch a
 segment once and cache it forever. "What changed since my last visit" is
 the root plus the segments newer than that visit — objects minted and
 objects retracted, both, in one read. And filtering is bounded by the
-period filtered: an object cannot be retracted before it is minted, so an
-object minted in month M is retracted if and only if its id is in the
-`retracted` of the root or of a segment for M or later. `knowledge_recall`
-with `include_retracted: false` over this month reads the root; over
-everything it reads everything, which is what everything costs. The one
+period filtered and the months elapsed since it: an object cannot be
+retracted before it is minted, so an object minted in month M is retracted
+if and only if its id is in the `retracted` of the root or of a segment for
+M or later — one list per month from M to now, about twelve a year, and
+however many objects the workspace holds. `knowledge_recall` with
+`include_retracted: false` over this month reads the root; over an old
+month it reads that month's segment and every later list; over everything
+it reads everything, which is what everything costs. The bound could be
+tightened to the period alone only by keying tombstones by the object's
+minting month, which would make a sealed document change on retraction —
+the trade the design rejected, and still rejects. The one
 exception is a legacy object, which has no M: checking whether it is
 retracted means reading every list, a cost accepted because no conformant
 writer creates such objects and their number is fixed at migration. In a
