@@ -881,6 +881,30 @@ and they change no conflict set.
 
 ---
 
+## Unbounded History, Bounded Work
+
+A workspace never shrinks. A retraction appends, a synthesis keeps its
+inputs, and nothing is deleted — that is the product, and it means a
+workspace grows for as long as anyone learns anything in it. What must not
+grow with it is the cost of touching it. This specification requires that no
+operation it defines read data in proportion to the workspace's history when
+the operation concerns a bounded part of it: reading the objects of a period,
+appending an object, checking the index for drift, and enumerating what
+changed since a point must each cost in proportion to what they touch. A
+proposed layout or index shape is judged against that.
+
+The numbers that made it a rule: a single-document index of 105,000 entries
+parses in 1.3 s and peaks at 700 MB resident, about 6.7 KB per entry, so a
+million-entry workspace would need 7 GB to answer any question; a flat
+`claims/` directory has its whole git tree object rewritten on every commit
+that adds a claim; and hosted directory listings truncate at a thousand
+files, which a workspace adding fourteen objects a day reaches in two
+months. None of these is a filesystem limit — APFS and NTFS are effectively
+unbounded, ext4 handles millions per directory. They are limits of the
+shapes, and shapes can be chosen.
+
+---
+
 ## File Layout
 
 ```
@@ -889,23 +913,73 @@ and they change no conflict set.
 /.dkf                          optional pointer, when tools start elsewhere
 
 /particulars/
-  par_01916f03-b680-71a2-bad4-40b49d5a5a6d.yaml
+  2024-08/
+    par_01916f03-b680-71a2-bad4-40b49d5a5a6d.yaml
 
 /claims/
-  clm_01916f03-b680-71a3-974f-9401ba374e1f.yaml
-  clm_01932b8b-c300-70c4-b1f5-270e927328ce.yaml
+  2024-08/
+    clm_01916f03-b680-71a3-974f-9401ba374e1f.yaml
+  2024-11/
+    clm_01932b8b-c300-70c4-b1f5-270e927328ce.yaml
+  2026-08/
+    clm_01a01ed5-c040-73b0-ba7b-da8a27ab53a6.yaml
 
 /syntheses/
-  syn_01933034-b1a0-705f-b788-2c7c58c46e29.yaml
+  2024-11/
+    syn_01933034-b1a0-705f-b788-2c7c58c46e29.yaml
 
 /merges/
-  mrg_01a023a7-e1c0-70a7-9232-ad5090460a2d.yaml
+  2026-08/
+    mrg_01a023a7-e1c0-70a7-9232-ad5090460a2d.yaml
 
 /publishes/
-  pub_01a0f3c1-4d20-7b8e-9a11-6c2f4e7d9b03.yaml
+  2026-09/
+    pub_01a0f3c1-4d20-7b8e-9a11-6c2f4e7d9b03.yaml
 
-/index.yaml                    derived cache — see below
+/index.yaml                    derived cache: the current month — see below
+/index/
+  2024-08.yaml                 sealed segments, one per earlier month
+  2024-11.yaml
+  2026-08.yaml
 ```
+
+That is the `dkf/0.2` layout. A `dkf/0.1` workspace is the same tree with no
+month directories — every file directly in its type directory and one
+`index.yaml` holding every entry — and it stays valid indefinitely; a reader
+chooses the layout by the `format` the workspace declares, never by looking
+at the directory.
+
+### Sharding
+
+A file's path is derived from its id and nothing else. A UUIDv7 carries its
+minting instant in its first 48 bits, so the calendar month of that instant,
+in UTC, is the shard: an id minted on 2026-09-05 lives under `2026-09/`
+whatever its `timestamp` says. The two are different by design — a claim
+about a 2019 document carries `timestamp: 2019-…` and an id minted when it
+was written — and only the id can be read without opening the file, by a
+crawler holding nothing but an index entry. Every type directory shards by
+the same rule, `particulars/` with its dozen files included, so that
+derivation is one rule with no per-type exception a consumer must know.
+
+The month is a calendar month rather than a slice of the id's hex — four
+hex characters give 49.7-day buckets with no date arithmetic, which is how
+git fans out its own object store — because a person reads these paths in
+diffs and pull requests, and `2026-09/` says what `01a0/` does not. Month is
+the only granularity: a workspace minting thousands of objects a month
+would want days, and that is a decision for when there is one.
+
+A month is **sealed** once any id in the workspace was minted in a later
+month. A sealed directory gains no files — every id of that month already
+exists — and its git tree object is never rewritten by an addition again. A
+file within it can still change in the one way any object file can, by
+gaining a `retracted` block. Implementations must not mint an id into an
+earlier month than the newest id in the workspace; a machine with a clock
+skewed by a month would, and the drift check reports the segment it
+disturbs, which is the right outcome. A file that sits in a month its id
+does not derive, or directly in a type directory of a `dkf/0.2` workspace,
+is not an object in the wrong place but a validation failure naming the
+file and the path its id derives: a reader never guesses the layout from
+what it finds on disk.
 
 ### `dkf.yaml`
 
@@ -914,7 +988,7 @@ the workspace by walking up from the working directory, exactly as git finds
 `.git`.
 
 ```yaml
-format: dkf/0.1
+format: dkf/0.2
 workspace:
   id: 01916cb5-32a0-7001-90a6-6195d31a5bb6   # bare uuidv7; used in urn:dkf: URIs
   base-uri: https://example.com/particulars/  # optional; MUST end in '/'
@@ -928,6 +1002,20 @@ defaults:                                     # optional
 
 `format` and `workspace.id` are required; everything else is optional.
 Implementations MUST ignore unknown keys so the file can be extended.
+
+`format` names the layout: `dkf/0.1` is flat, `dkf/0.2` is sharded. A
+reader MUST refuse to open a workspace whose `format` it does not implement,
+naming the version — it must not open the workspace and read what it can.
+The rule exists because a change of *shape* cannot be made additively: the
+leniency that lets an older reader survive a new field or a new entry type
+says nothing about a new layout, and an older reader meeting one would not
+fail but glob `claims/*.yaml`, find nothing, and report a small workspace as
+a whole one. Partial and silent is worse than refused, and `format` is the
+one thing every reader reads first. Honestly stated: a `dkf/0.1` reader
+written before this rule may accept `dkf/0.2` and misread. One such reader
+exists, the reference implementation, and it is updated with the rule; every
+reader from now on is bound. A `dkf/0.2` reader reads both layouts, and no
+workspace is obliged to migrate.
 
 `defaults` are applied by **writers only**, when a tool call omits a value:
 `scope` fills `context.scope`; `source` fields fill an incomplete `source`.
@@ -1017,7 +1105,8 @@ described under [MCP Server Tools](#mcp-server-tools).
 
 The index is a lightweight manifest of all IDs, types, subjects, and
 relationships. It enables recall and conflict detection without parsing every
-file.
+file — and without parsing every *entry*: in `dkf/0.2` it is a small root
+document for the current month plus one sealed segment per earlier month.
 
 The object and record files are the **source of truth**. The index is a
 derived, regenerable cache: it MUST be fully reconstructible from the files,
@@ -1030,8 +1119,26 @@ directory — for them it is the enumeration mechanism, and they should treat it
 as potentially lagging the files.
 
 ```yaml
-# index.yaml
-format: dkf/0.1
+# index.yaml — the root: the current month, the segments, the tombstones
+format: dkf/0.2
+segments:
+  - index/2024-08.yaml
+  - index/2024-11.yaml
+  - index/2026-08.yaml
+entries:
+  - id: pub_01a0f3c1-4d20-7b8e-9a11-6c2f4e7d9b03
+    type: publish
+    scope: public
+    claims:
+      - clm_01916f03-b680-71a3-974f-9401ba374e1f
+      - syn_01933034-b1a0-705f-b788-2c7c58c46e29
+retracted:
+  - clm_01a01ed5-c040-73b0-ba7b-da8a27ab53a6
+```
+
+```yaml
+# index/2024-08.yaml — a sealed segment: format and that month's entries, nothing else
+format: dkf/0.2
 entries:
   - id: par_01916f03-b680-71a2-bad4-40b49d5a5a6d
     type: particular
@@ -1043,41 +1150,54 @@ entries:
     topics: [architecture, distributed-systems]
     timestamp: 2024-08-20T09:00:00Z
     author: https://orcid.org/0000-0002-1825-0097
+```
+
+```yaml
+# index/2026-08.yaml
+format: dkf/0.2
+entries:
   - id: clm_01a01ed5-c040-73b0-ba7b-da8a27ab53a6
     type: claim
     subject: par_01916f03-b680-71a2-bad4-40b49d5a5a6d
     scope: organisation
     timestamp: 2026-08-20T11:02:00Z
-    retracted: true
-  - id: syn_01933034-b1a0-705f-b788-2c7c58c46e29
-    type: synthesis
-    subject: par_01916f03-b680-71a2-bad4-40b49d5a5a6d
-    inputs:
-      - clm_01916f03-b680-71a3-974f-9401ba374e1f
-      - clm_01932b8b-c300-70c4-b1f5-270e927328ce
-      - clm_01932f48-7ce0-72e1-8c4e-af7596e72997
-    scope: organisation
-    timestamp: 2024-11-15T14:23:00Z
   - id: mrg_01a023a7-e1c0-70a7-9232-ad5090460a2d
     type: merge
     uris:
       - https://example.com/particulars/project-x
       - urn:dkf:01916cb5-32a0-7001-90a6-6195d31a5bb6:projectx
-  - id: pub_01a0f3c1-4d20-7b8e-9a11-6c2f4e7d9b03
-    type: publish
-    scope: public
-    claims:
-      - clm_01916f03-b680-71a3-974f-9401ba374e1f
-      - syn_01933034-b1a0-705f-b788-2c7c58c46e29
 ```
+
+The **current month is the month of the newest id** in the workspace, not
+the clock, so a rebuild is a function of the files alone: two
+implementations rebuilding on different days produce the same root and the
+same segments. On the first rebuild after a new month's first object is
+minted, the previous month's entries move out of `entries` into a new
+segment, `segments` gains its path, and the tail starts again — one large
+diff a month, the shape of a log rotating. A segment is itself a valid index
+document, `format` and `entries` and nothing else, and once sealed it never
+changes. Segment paths are relative to `index.yaml`.
+
+`retracted` is why. Retraction is the one property of an object that changes
+after its entry was written, and `retracted: true` on the entry was the one
+mutable field in the index — the one thing that would force a sealed segment
+to be rewritten. Moving it to a list in the root makes every segment
+byte-immutable once sealed, which is what lets git leave its tree alone and
+lets a remote consumer fetch a segment once, cache it forever, and poll only
+the root. The list is complete — every retracted id, including ones whose
+entry is still in the tail — so there is one place to look, and
+`knowledge_recall` with `include_retracted: false` still filters without
+opening a file. In a `dkf/0.1` index the flag stays on the entry, and a
+`dkf/0.2` reader honours it there.
 
 Baseline fields: every entry has `id` and `type`; particulars have `uri`;
 claims and syntheses have `subject`; syntheses have `inputs`; merges have
 `uris`; promotions have `claims` and `scope`. Entries MAY also carry `scope`,
-`topics`, `timestamp`, `retracted: true`, and `author` and `document-author`
-— the last two mirroring the object's `source.author` and
-`source.document.author` as written — so that `knowledge_recall` can filter
-without opening files.
+`topics`, `timestamp`, and `author` and `document-author` — the last two
+mirroring the object's `source.author` and `source.document.author` as
+written — so that `knowledge_recall` can filter without opening files. In a
+`dkf/0.1` index an entry MAY also carry `retracted: true`; in `dkf/0.2` it
+MUST NOT, retraction living in the root's list.
 Implementations MAY add further fields, and future versions of this
 specification MAY add further entry types; consumers MUST ignore fields and
 entries they do not understand.
@@ -1098,8 +1218,13 @@ writer.
 
 Implementations are expected to provide an operation that rebuilds the index
 from the files, and a check that reports — without modifying anything —
-whether the committed index has drifted from the files, suitable for CI.
-The check exists to catch the index lagging *changes to the workspace*, and
+whether the committed index has drifted from the files, suitable for CI. In
+`dkf/0.2` the check is per document: the root's `entries` against a
+regenerated tail, each segment against its regenerated self — from that
+month's files alone, so a sealed segment costs its own size and not the
+workspace's — and the `retracted` list against a regenerated list, an id in
+one and not the other being drift; a segment listed and absent, or present
+and unlisted, is drift too. The check exists to catch the index lagging *changes to the workspace*, and
 its tolerance follows from that rather than from which fields are optional.
 For a MAY field that mirrors an **immutable** property of the object —
 `scope`, `topics`, `timestamp`, `author`, `document-author` — a field
@@ -1108,16 +1233,29 @@ direction: the object cannot have changed, so the difference can only mean
 one writer predated the field. That is what lets a newer implementation
 write `author` into entries without failing every index committed before
 the field existed, and an older one check an index it cannot fully read.
-`retracted` is the exception, and the reason the rule is stated on
+Retraction is the exception, and the reason the rule is stated on
 immutability rather than on absence: it mirrors the one property of an
-object that *can* change after the index was written, and its absence is
-not ignorance but the value `false`. It is compared as present with that
-meaning, so a claim retracted after the index was committed is reported —
-which is the one staleness a drift check most exists to catch, and the case
-a rule about "absent MAY fields" would have exempted. A MAY field present
-on both sides with different values is drift, as is any missing or extra
-entry. The next MAY field classifies itself by asking whether what it
-mirrors can change.
+object that *can* change after the index was written. In a `dkf/0.2` index
+it is compared through the `retracted` list, so a claim retracted after the
+root was committed is reported — which is the one staleness a drift check
+most exists to catch. In a `dkf/0.1` index the entry flag is compared as
+present with the meaning its absence carries, `false`, for the same reason;
+a rule about "absent MAY fields" would have exempted exactly this case. A
+MAY field present on both sides with different values is drift, as is any
+missing or extra entry. The next MAY field classifies itself by asking
+whether what it mirrors can change — and if it can, it belongs in the root,
+not on the entry.
+
+### Migration
+
+A `dkf/0.1` workspace becomes `dkf/0.2` by moving each object and record
+file to the path its id derives, regenerating the index in the new shape,
+and rewriting `format` in `dkf.yaml`. Nothing else changes: no id, no field,
+no `source`, no `retracted` block, no canonical payload, so every signature
+that verified before verifies after, and git records the moves as renames
+with full history. A migration that changed any payload has not been done
+correctly. Migration is optional; a flat workspace stays valid, and the
+ceilings it faces are documented above rather than forbidden.
 
 ---
 
@@ -1205,7 +1343,7 @@ a well-known path:
 
 ```yaml
 # https://example.com/.well-known/knowledge.yaml
-format: dkf/0.1
+format: dkf/0.2
 index: /knowledge/index.yaml
 feeds:
   - /knowledge/claims/
@@ -1222,9 +1360,15 @@ publisher:
 
 `format`, `index`, and `feeds` are required; `topics` and `publisher` are
 optional; unknown keys are ignored, as everywhere else in this format. Paths
-resolve against the site root. Every published object is fetchable at a feed
-path plus `<id>.yaml`, the index enumerates every published object, and a
-remote consumer treats the index as potentially lagging the files.
+resolve against the site root. Every published object is fetchable at a
+predictable path derived from its id and the workspace's format, which a
+consumer takes from the index the manifest names: a feed path plus
+`<id>.yaml` for a `dkf/0.1` publisher, a feed path plus `<YYYY-MM>/<id>.yaml`
+for `dkf/0.2`, the month derived from the id as above. The index enumerates
+every published object — in `dkf/0.2` it is the root, whose `segments`
+resolve relative to the index's own URL, so a consumer fetches a sealed
+segment once and thereafter polls only the root — and a remote consumer
+treats it as potentially lagging the files.
 
 A feed serves only objects whose **effective scope is `public`**. Serving the
 promotions feed lets a consumer verify that filtering for itself; a publisher
