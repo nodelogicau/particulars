@@ -9,6 +9,6 @@
 
 - [x] 2.1 Verify each scenario across the two delta specs is answered by a normative sentence in README.md, including behind-writer retraction, behind-writer mint, writer ahead, clamped-id warning, and far-future id caught at review
 - [x] 2.2 Confirm both MODIFIED blocks copy their baseline requirement text in full with every pre-existing scenario retained
-- [ ] 2.3 Comment on and close #28: retraction window as proposed; mint clamped rather than refused, and why (the workspace-wide form of the monotonic counter; a clamped mint does not move the seal); the contagion trade and the pull-request practice; the #27 "no write refused" claim now true
+- [x] 2.3 Commented on and closed #28 (2026-09-11, landed as 45b7625): retraction window as proposed; mint clamped rather than refused, and why (the workspace-wide form of the monotonic counter; a clamped mint does not move the seal); the contagion trade and the pull-request practice; the #27 "no write refused" claim now true
 - [x] 2.4 Commented on particulars-cli#11 (2026-09-11): every minting verb and `retract` clamp to the newest id when the clock is behind; the refusal paths from the previous two comments are withdrawn except the sealed-month and no-attestation cases; the DKF check should surface future-dated warnings where a reviewer sees them
-- [ ] 2.5 Record in particulars-knowledge: a claim qualifying the third claim of #39 — no write is refused for a clock disagreement is now true, and how
+- [x] 2.5 Recorded in particulars-knowledge#39 as clm_01a08f37-457e-7071-be3c-763a9abf4866: a claim qualifying the third claim of #39 — no write is refused for a clock disagreement is now true, and how
