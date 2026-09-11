@@ -1022,8 +1022,14 @@ months ahead seals the month every correct writer is minting into. So a
 validator — which has a clock too — warns, naming the object, on any id
 minted or timestamp dated later than now, since a clock a few days fast at
 a month end is ordinary and the validator's own clock may be the wrong one;
-and it **fails** on an id two or more months ahead of its current month,
-because a validator that far behind real time is itself the broken machine.
+and it **fails** on an id two or more months ahead of its current month.
+The uncertainty is the same in both cases — a validator two months slow
+cannot tell itself from an id two months fast — and the rule rests on the
+asymmetry of consequence, not of confidence: a validator whose own clock is
+two months slow fails a healthy workspace once, loudly, on the machine that
+is itself broken, and that is the better error, because the alternative is
+accepting an id that seals the month every correct writer is minting into,
+which cannot be undone.
 Every other machine's validator flags such an id the day it appears, and
 the place to catch it is the pull request: the object arrives on a branch,
 the DKF check runs `validate` on a correctly set machine, and the check
@@ -1285,10 +1291,13 @@ history. Every sealed segment is byte-immutable in a workspace that
 validates, which is what lets git leave its tree alone and lets a remote
 consumer fetch a segment once and cache it forever — and "a workspace that
 validates" is any whose branches merge within a month of a boundary, which
-is every branch this format's own workspace has ever had. The count under
-`segments` is what makes the promise checkable: a rebuild lists each sealed
-month's directories and compares against the count, parsing nothing unless
-they differ, and a difference fails validation as a late merge. A remote
+is every branch this format's own workspace has ever had. Validation
+carries both halves of that promise: the count under `segments` proves no
+file arrived in a sealed month — a rebuild lists each sealed month's
+directories and compares against the count, parsing nothing unless they
+differ, and a difference fails validation as a late merge — and the
+comparison of every sealed month's `retracted` list against the files
+proves no retraction was dated into one. A remote
 consumer that sees a segment's count change in the root has its one signal
 to refetch that segment; a count that never changes is a segment it never
 needs again. "What changed since my last visit" is the root plus the
@@ -1345,11 +1354,22 @@ listing of that month's directories against the segment's recorded
 `count`, and a sealed segment whose count matches is not parsed at all; a
 count that does not match is a late merge, reported naming the files found
 in the directories and absent from the segment, and it fails validation.
-Then per document — the root against a regenerated tail, any differing
-segment against its regenerated self, and `index/legacy.yaml` against its
-own — both `entries` and `retracted` are compared, an id in one list and
-not the other being drift; a segment listed and absent, or present and
-unlisted, is drift too. The check exists to catch the index lagging *changes to the workspace*, and
+A matching count guarantees exactly one thing: no file arrived in that
+month since the segment was written — no late *mint*. It says nothing
+about retractions, which append a block to a file already counted and
+change no count, so the drift check is not where a retraction dated into a
+sealed month is found. Then per document — the root against a regenerated
+tail, any differing segment against its regenerated self, and
+`index/legacy.yaml` against its own — both `entries` and `retracted` are
+compared, an id in one list and not the other being drift; a segment
+listed and absent, or present and unlisted, is drift too. `validate` does
+more, because it can: it already parses every object file, so it
+regenerates each sealed month's `retracted` list from those files and
+compares it with the committed segment, and a retraction dated into a
+sealed month — written against the guard, or merged from a branch open
+across two boundaries — fails validation naming the object and the
+segment. The two operations guarantee different things, and a reader of
+either should know which. The check exists to catch the index lagging *changes to the workspace*, and
 its tolerance follows from that rather than from which fields are optional.
 For a MAY field that mirrors an **immutable** property of the object —
 `scope`, `topics`, `timestamp`, `author`, `document-author` — a field
