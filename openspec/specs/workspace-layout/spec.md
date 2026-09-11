@@ -55,7 +55,7 @@ In a `dkf/0.2` workspace, an object or record file SHALL be located at `<type-di
 - **WHEN** a validator finds `claims/2026-08/clm_07m3zp9s2q1r4t8v.yaml`
 - **THEN** validation fails, naming the file and `claims/legacy/` as its derived location
 ### Requirement: A sealed month gains no files
-A month directory SHALL be sealed once any id in the workspace was minted in a later month. A sealed directory SHALL gain no files. A file within it MAY change only by the single modification the format permits to any object file, the appending of a `retracted` block. Implementations SHALL NOT mint an id whose month is earlier than that of the newest id in the workspace, and SHALL NOT write a retraction whose `timestamp` falls in a month earlier than that of the newest id in the workspace — the same bound, so that a write which passes its guard always has an unsealed home in the index. Implementations SHALL NOT write a retraction whose `timestamp` is later than the writer's own clock. The `legacy` directory is not a month: it is never sealed, no conformant writer adds to it, and a rebuild that finds it changed reports the difference as drift.
+A month directory SHALL be sealed once any id in the workspace was minted in a later month. A sealed directory SHALL gain no files. A file within it MAY change only by the single modification the format permits to any object file, the appending of a `retracted` block. A writer SHALL write at the workspace's present when its own clock is behind it: an implementation SHALL NOT mint an id earlier than the newest id in the workspace, and when its clock is earlier than that id's instant it SHALL mint at an instant just after the newest id rather than refuse; and it SHALL NOT write a retraction whose `timestamp` is earlier than the start of the newest id's month, nor later than the later of its own clock and that instant. No write SHALL be refused because another writer's clock disagreed with this one. The `legacy` directory is not a month: it is never sealed, no conformant writer adds to it, and a rebuild that finds it changed reports the difference as drift.
 
 #### Scenario: Retracting into a sealed month
 - **WHEN** a claim under `claims/2026-08/` is retracted in October 2026
@@ -74,12 +74,24 @@ A month directory SHALL be sealed once any id in the workspace was minted in a l
 - **THEN** no sealed-month rule is violated, and the next drift check reports the index as lagging
 
 #### Scenario: A retraction dated into the future
-- **WHEN** an implementation whose clock reads 2026-11-03 is asked to write a retraction with `timestamp: 2027-11-03T10:00:00Z`
+- **WHEN** an implementation whose clock reads 2026-11-03 is asked to write a retraction with `timestamp: 2027-11-03T10:00:00Z`, and no id in the workspace is later than November 2026
 - **THEN** it refuses, naming the timestamp and its own clock
 
 #### Scenario: A mint after a retraction dated ahead
 - **WHEN** the newest id is from October 2026, a retraction has been dated in December 2026, and an implementation mints in November 2026
 - **THEN** the mint is permitted, because the bound is the newest id's month and not the retraction's
+
+#### Scenario: A retraction from a writer behind the workspace
+- **WHEN** the newest id was minted on 2 December 2026 by a machine two days fast, and a machine whose clock reads 30 November 2026 retracts an object
+- **THEN** it writes the retraction with `timestamp` at the start of December 2026, the workspace's present, and records in `reason` when it was decided if that matters
+
+#### Scenario: A mint from a writer behind the workspace
+- **WHEN** the newest id was minted on 2 December 2026 by a machine two days fast, and a machine whose clock reads 30 November 2026 asserts a claim
+- **THEN** it mints an id whose instant is just after the newest id, the file lands under `claims/2026-12/`, and the claim's `timestamp` carries the writer's own clock
+
+#### Scenario: A writer ahead of the workspace
+- **WHEN** a writer's clock is later than every id in the workspace
+- **THEN** it mints and dates retractions at its own clock, as before
 ### Requirement: A reader reads the layout its declared version names
 A reader SHALL determine a workspace's layout from the `format` in its `dkf.yaml` and from the `format` of each index document it opens: `dkf/0.1` names the flat layout, in which every object file sits directly in its type directory and the index is a single document; `dkf/0.2` names the sharded layout defined here. A `dkf/0.2` reader SHALL read both. A reader SHALL NOT infer the layout from the directory contents.
 
@@ -110,7 +122,7 @@ Moving a workspace from `dkf/0.1` to `dkf/0.2` SHALL consist of relocating each 
 - **THEN** that file moves to `claims/legacy/`, its id unchanged, and the workspace validates under `dkf/0.2`
 
 ### Requirement: A validator warns on time it cannot have seen
-A validator SHOULD report, as a warning naming the object, any id whose minting instant is later than the validator's own clock, and any object or retraction `timestamp` later than it. The warning SHALL NOT fail validation: the validator's clock may be the one that is wrong, and under the single sealing clock a future-dated object still has exactly one derived home.
+A validator SHOULD report, as a warning naming the object, any id whose minting instant is later than the validator's own clock, and any object or retraction `timestamp` later than it. The warning SHALL NOT fail validation: the validator's clock may be the one that is wrong, and under the single sealing clock a future-dated object still has exactly one derived home. The specification SHALL state that an id can only be dated ahead by a clock, that every validator on a correctly set machine will therefore flag it, and that the place to catch it is a pull-request check before the object is merged, since once merged it is the workspace's present until the calendar reaches it.
 
 #### Scenario: A future-dated retraction in a hand-edited file
 - **WHEN** a claim file carries `retracted.timestamp: 2027-11-03T10:00:00Z` and the validator runs on 2026-11-04
@@ -123,3 +135,11 @@ A validator SHOULD report, as a warning naming the object, any id whose minting 
 #### Scenario: Honest time
 - **WHEN** every id and timestamp in the workspace is at or before the validator's clock
 - **THEN** nothing is reported
+
+#### Scenario: A clamped id seen from the behind machine
+- **WHEN** a writer behind the workspace mints an id clamped to just after the newest id, and then validates on the same machine
+- **THEN** validation warns naming the new object, because from that machine's clock the id is in the future, and does not fail
+
+#### Scenario: A far-future id caught at review
+- **WHEN** a machine a year fast mints an object on a branch and opens a pull request, and the check runs `validate` on a correctly set machine
+- **THEN** the check surfaces the warning naming the object, and a reviewer declines to merge it
