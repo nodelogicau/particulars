@@ -7,7 +7,7 @@ Defines the identifier format for DKF objects and records (`<prefix>_<uuidv7>`),
 ## Requirements
 
 ### Requirement: Object identifiers are prefixed UUIDv7
-Every DKF object and record id SHALL be formed as `<prefix>_` followed by a lowercase canonical RFC 9562 UUID version 7, where `<prefix>` is `par` (particular), `clm` (claim), `syn` (synthesis), `mrg` (merge), or `pub` (publish). An id's instant is its position in the workspace's log, not a reading of the writer's clock: minting implementations SHALL ensure ids created within the same millisecond sort in creation order (e.g. via a monotonic counter), and SHALL NOT mint an id earlier than the newest id already in the workspace, advancing the instant to just after that id when the writer's clock is behind it. Assertion time is the object's `timestamp`, and consumers SHALL NOT require the two to agree.
+Every DKF object and record id SHALL be formed as `<prefix>_` followed by a lowercase canonical RFC 9562 UUID version 7, where `<prefix>` is `par` (particular), `clm` (claim), `syn` (synthesis), `mrg` (merge), or `pub` (publish). Minting implementations SHALL ensure ids created within the same millisecond sort in creation order (e.g. via a monotonic counter). An id's instant is a reading of the minting implementation's clock; assertion time is the object's `timestamp`, and consumers SHALL NOT require the two to agree.
 
 #### Scenario: Minting a new claim id
 - **WHEN** an implementation creates a new claim
@@ -21,13 +21,9 @@ Every DKF object and record id SHALL be formed as `<prefix>_` followed by a lowe
 - **WHEN** an implementation records a promotion
 - **THEN** the id carries the `pub` prefix
 
-#### Scenario: Minting behind the workspace
-- **WHEN** the newest id in the workspace was minted at an instant later than the writer's clock
-- **THEN** the writer mints at an instant just after that id, and lexical ordering of ids in the workspace still matches creation order
-
-#### Scenario: Minting ahead of the workspace
-- **WHEN** the writer's clock is later than every id in the workspace
-- **THEN** the writer mints at its own clock
+#### Scenario: Two writers with different clocks
+- **WHEN** two implementations on different machines mint ids in the same hour with clocks a minute apart
+- **THEN** each id carries its own machine's instant, and the workspace's layout tolerates the disagreement through the sealing grace period defined in `workspace-layout`
 ### Requirement: Readers accept legacy identifier forms
 Consumers and validators SHALL accept any id matching `^(par|clm|syn|mrg|pub)_[A-Za-z0-9-]+$` when reading, so that workspaces written with other schemes (including the draft's truncated ULIDs) remain readable. Validators MAY emit a warning for ids that are not UUIDv7.
 
