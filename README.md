@@ -65,13 +65,19 @@ clm_01916f03-b680-71a3-974f-9401ba374e1f
 ```
 
 UUIDv7 is time-ordered, so `ls claims/` is a chronological log and new files
-cluster at the end of a diff. Implementations MUST mint with a monotonic
-counter so that ids created within the same millisecond still sort in creation
-order.
+cluster at the end of a diff. An id's instant is its **position in the
+workspace's log**, not a reading of the writer's clock: implementations MUST
+mint with a monotonic counter so that ids created within the same
+millisecond still sort in creation order, and MUST NOT mint an id earlier
+than the newest id already in the workspace — when the writer's clock is
+behind that id, the instant advances to just after it. The second rule is
+the first at workspace scale: both move an id off the raw clock so that
+creation order holds.
 
 The time embedded in an id is the **minting** instant. The `timestamp` field on
 an object is the **assertion** time and may be earlier — for example when
-recording a dated document. Consumers MUST NOT require the two to agree.
+recording a dated document — or, for a writer whose clock is behind the
+workspace, later than the id. Consumers MUST NOT require the two to agree.
 
 Readers MUST accept any id matching `^(par|clm|syn|mrg|pub)_[A-Za-z0-9-]+$`, so
 that workspaces written with other schemes (including earlier drafts of this
@@ -979,31 +985,49 @@ A month is **sealed** once any id in the workspace was minted in a later
 month. A sealed directory gains no files — every id of that month already
 exists — and its git tree object is never rewritten by an addition again. A
 file within it can still change in the one way any object file can, by
-gaining a `retracted` block. Implementations must not mint an id into an
-earlier month than the newest id in the workspace; a machine with a clock
-skewed by a month would, and the drift check reports the segment it
-disturbs, which is the right outcome. The same guard applies to
-retractions, against the same bound: a `retracted` block is keyed into the
-index by the month of its `timestamp` (see `index.yaml` below), so an
-implementation must not write one dated into an earlier month than the
-newest id's month. The bound is the newest id's month and not anything
-else on purpose — sealing is driven by mints alone, so a write that passes
-its guard always has an unsealed home, and two writers whose clocks
-disagree can never leave the index in a state a rebuild cannot reproduce.
-A retraction that was decided last month is recorded with a timestamp of
-now and a `reason` that says when — the reason field is where that belongs.
-Nor may a retraction be dated later than the writer's own clock: no honest
-recording is in the future, and the upper bound costs nothing while
-stopping the one plausible way of putting a tombstone a year ahead, a typo.
-Writer rules bind writers; a validator has a clock too, and should warn —
-never fail — on any id minted, or object or retraction timestamp dated,
-later than now, naming the object. A warning because the validator's clock
-may be the wrong one, and because nothing structural is broken: a
-future-dated object still has exactly one derived home. A file that sits in a month its id does not
-derive, or directly in a type directory of a `dkf/0.2` workspace, is not an
-object in the wrong place but a validation failure naming the file and the
-path its id derives: a reader never guesses the layout from what it finds on
-disk.
+gaining a `retracted` block. One rule keeps every write out of a sealed
+month, whatever the clocks say: **a writer ahead of the workspace writes at
+its own present; a writer behind it writes at the workspace's.** The
+workspace's present is the newest id's instant — sealing is driven by mints
+alone, so that is the earliest point with an unsealed home, and two writers
+whose clocks disagree can never leave the index in a state a rebuild cannot
+reproduce. For a mint: an implementation never mints an id earlier than the
+newest id in the workspace, and when its clock is behind it mints just
+after that id instead of refusing — the id lands in the open month and
+does not move the seal, and its `timestamp` still carries the writer's own
+clock. For a retraction: its `timestamp` is not earlier than the start of
+the newest id's month, since a `retracted` block is keyed into the index by
+that month (see `index.yaml` below), and not later than the later of the
+writer's clock and that same instant. The window is never empty, and no
+write is ever refused because another machine's clock disagreed with this
+one. A retraction that was decided last month is recorded at the present
+with a `reason` that says when — the reason field is where that belongs.
+The upper bound still refuses a timestamp a year ahead: what is permitted
+is only time the writer's clock or the workspace's own ids attest to, and a
+typo is neither.
+
+The trade, stated plainly: a far-future id, once merged, *is* the
+workspace's present until the calendar reaches it. Under refusal every
+writer would wait; under this rule every later id carries the bad month,
+and every validator on a correctly set machine warns on each. Neither is
+good, and the difference is whether the team can keep working. What bounds
+it is not in the format. Nothing dates an id but a clock, so a far-future
+id is always a bad machine, and every *other* machine's validator flags it
+the day it appears — a validator has a clock too, and should warn, never
+fail, on any id minted, or object or retraction timestamp dated, later than
+now, naming the object. A warning because the validator's clock may be the
+wrong one, and because nothing structural is broken: a future-dated object
+still has exactly one derived home, and a writer that clamped to the
+workspace's present will see its own new ids warned on, correctly, from
+where it stands. The place to catch a bad clock is the pull request: the
+object arrives on a branch, the DKF check runs `validate` on a correctly set
+machine and surfaces the warning, and a reviewer declines to merge it.
+Caught there, the id never becomes a permanent fact; missed there, the
+workspace has a bad month to live through, working. A file that sits in a
+month its id does not derive, or directly in a type directory of a
+`dkf/0.2` workspace, is not an object in the wrong place but a validation
+failure naming the file and the path its id derives: a reader never guesses
+the layout from what it finds on disk.
 
 One shard is not a month. Readers must accept any id matching the format's
 lenient pattern, including the draft's truncated ULIDs, and such an id
