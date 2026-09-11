@@ -8,6 +8,6 @@
 
 - [x] 2.1 Verify each scenario across the two delta specs is answered by a normative sentence in README.md, including the drift check not seeing a sealed-month retraction, the late-merge retraction, and the validator two months slow
 - [x] 2.2 Confirm both MODIFIED blocks copy their baseline requirement in full with every pre-existing scenario retained except the one deliberately moved to the ADDED requirement
-- [ ] 2.3 Comment on and close #30: both points accepted; the first fixed by naming which operation guarantees what rather than by parsing in the drift check, and why (the regenerated retraction list needs every file, which is validation's cost and not the lag check's); the second with the proposed wording
+- [x] 2.3 Commented on and closed #30 (2026-09-12, landed as ad35395): both points accepted; the first fixed by naming which operation guarantees what rather than by parsing in the drift check, and why (the regenerated retraction list needs every file, which is validation's cost and not the lag check's); the second with the proposed wording
 - [x] 2.4 Commented on particulars-cli#11 (2026-09-12): `index --check` unchanged (counts plus open documents); `validate` additionally regenerates each sealed month's tombstone list and compares
-- [ ] 2.5 Record in particulars-knowledge: a claim qualifying the fifth claim of #39 with the split of guarantees, and noting the pattern the week completes
+- [x] 2.5 Recorded in particulars-knowledge#39 as clm_01a092e9-72fb-7864-8bdd-db567d6ed87d: a claim qualifying the fifth claim of #39 with the split of guarantees, and noting the pattern the week completes
