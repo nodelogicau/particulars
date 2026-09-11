@@ -65,19 +65,15 @@ clm_01916f03-b680-71a3-974f-9401ba374e1f
 ```
 
 UUIDv7 is time-ordered, so `ls claims/` is a chronological log and new files
-cluster at the end of a diff. An id's instant is its **position in the
-workspace's log**, not a reading of the writer's clock: implementations MUST
-mint with a monotonic counter so that ids created within the same
-millisecond still sort in creation order, and MUST NOT mint an id earlier
-than the newest id already in the workspace — when the writer's clock is
-behind that id, the instant advances to just after it. The second rule is
-the first at workspace scale: both move an id off the raw clock so that
-creation order holds.
+cluster at the end of a diff. Implementations MUST mint with a monotonic
+counter so that ids created within the same millisecond still sort in creation
+order. An id's instant is a reading of the minting machine's clock: two
+machines a minute apart mint ids a minute apart, and the layout below
+tolerates that through a grace period rather than by correcting either.
 
 The time embedded in an id is the **minting** instant. The `timestamp` field on
 an object is the **assertion** time and may be earlier — for example when
-recording a dated document — or, for a writer whose clock is behind the
-workspace, later than the id. Consumers MUST NOT require the two to agree.
+recording a dated document. Consumers MUST NOT require the two to agree.
 
 Readers MUST accept any id matching `^(par|clm|syn|mrg|pub)_[A-Za-z0-9-]+$`, so
 that workspaces written with other schemes (including earlier drafts of this
@@ -981,49 +977,57 @@ diffs and pull requests, and `2026-09/` says what `01a0/` does not. Month is
 the only granularity: a workspace minting thousands of objects a month
 would want days, and that is a decision for when there is one.
 
-A month is **sealed** once any id in the workspace was minted in a later
-month. A sealed directory gains no files — every id of that month already
-exists — and its git tree object is never rewritten by an addition again. A
-file within it can still change in the one way any object file can, by
-gaining a `retracted` block. One rule keeps every write out of a sealed
-month, whatever the clocks say: **a writer ahead of the workspace writes at
-its own present; a writer behind it writes at the workspace's.** The
-workspace's present is the newest id's instant — sealing is driven by mints
-alone, so that is the earliest point with an unsealed home, and two writers
-whose clocks disagree can never leave the index in a state a rebuild cannot
-reproduce. For a mint: an implementation never mints an id earlier than the
-newest id in the workspace, and when its clock is behind it mints just
-after that id instead of refusing — the id lands in the open month and
-does not move the seal, and its `timestamp` still carries the writer's own
-clock. For a retraction: its `timestamp` is not earlier than the start of
-the newest id's month, since a `retracted` block is keyed into the index by
-that month (see `index.yaml` below), and not later than the later of the
-writer's clock and that same instant. The window is never empty, and no
-write is ever refused because another machine's clock disagreed with this
-one. A retraction that was decided last month is recorded at the present
-with a `reason` that says when — the reason field is where that belongs.
-The upper bound still refuses a timestamp a year ahead: what is permitted
-is only time the writer's clock or the workspace's own ids attest to, and a
-typo is neither.
+A month is **sealed** once any id in the workspace was minted **two or more
+months after it**. The current month — the newest id's — and the month
+before it are open. One month of grace is what makes a git-native format
+work: a pull request minted on 28 November and merged on 5 December, after
+main has minted in December, lands in November, which is still open. Every
+guard bounded by "the newest id in the workspace" misses that case, because
+on a branch the newest id is branch-local and the violation appears only at
+the merge, where no writer is minting. The grace period also absorbs clock
+skew of hours or days at a boundary, so a writer simply mints and dates
+retractions at its own clock. The one guard left is the one that was always
+necessary: an implementation must not mint into a sealed month or date a
+retraction into one, and with a month of grace that takes a clock more than
+a month out. A retraction that was decided last month is recorded at the
+present with a `reason` that says when — the reason field is where that
+belongs.
 
-The trade, stated plainly: a far-future id, once merged, *is* the
-workspace's present until the calendar reaches it. Under refusal every
-writer would wait; under this rule every later id carries the bad month,
-and every validator on a correctly set machine warns on each. Neither is
-good, and the difference is whether the team can keep working. What bounds
-it is not in the format. Nothing dates an id but a clock, so a far-future
-id is always a bad machine, and every *other* machine's validator flags it
-the day it appears — a validator has a clock too, and should warn, never
-fail, on any id minted, or object or retraction timestamp dated, later than
-now, naming the object. A warning because the validator's clock may be the
-wrong one, and because nothing structural is broken: a future-dated object
-still has exactly one derived home, and a writer that clamped to the
-workspace's present will see its own new ids warned on, correctly, from
-where it stands. The place to catch a bad clock is the pull request: the
-object arrives on a branch, the DKF check runs `validate` on a correctly set
-machine and surfaces the warning, and a reviewer declines to merge it.
-Caught there, the id never becomes a permanent fact; missed there, the
-workspace has a bad month to live through, working. A file that sits in a
+What the grace period does not cover is a branch open across *two* or more
+boundaries. Such a merge adds a file to a sealed month's directory, and the
+segment for that month would have to change. It is detected without
+reading any sealed history: each entry under `segments` records the
+segment's `count`, which equals the number of files in that month's
+directories, and a rebuild or validation compares a listing against the
+count and parses nothing unless they differ. A difference is a **late
+merge**: validation fails naming the files, and the remedy is DKF's rebase —
+re-mint the branch's objects before merging. Rare, visible (a months-old
+pull request), and loud, which is the right kind of residual. The
+alternative that closes even this case — indexing an entry by the month it
+*arrived* rather than the month it was minted, as tombstones already do —
+was rejected because it breaks the invariant that a segment holds exactly
+the files in its directory, and that invariant is what lets an incremental
+rebuild place a new entry without parsing every sealed segment to learn
+what is already indexed. Grace width is a dial; one month covers every pull
+request this format's own workspace has had, and a wider one can become a
+`dkf.yaml` key when a workspace with quarter-long branches asks.
+
+The git consequence is a benefit delivered, not a rule: an old month's tree
+object is rewritten only by a late merge or by a retraction, and never by
+an ordinary append.
+
+Nothing dates an id but a clock, and a far-future id is always a bad
+machine. Under the grace period it is also dangerous, because an id two
+months ahead seals the month every correct writer is minting into. So a
+validator — which has a clock too — warns, naming the object, on any id
+minted or timestamp dated later than now, since a clock a few days fast at
+a month end is ordinary and the validator's own clock may be the wrong one;
+and it **fails** on an id two or more months ahead of its current month,
+because a validator that far behind real time is itself the broken machine.
+Every other machine's validator flags such an id the day it appears, and
+the place to catch it is the pull request: the object arrives on a branch,
+the DKF check runs `validate` on a correctly set machine, and the check
+fails. Caught there, the id never becomes a permanent fact. A file that sits in a
 month its id does not derive, or directly in a type directory of a
 `dkf/0.2` workspace, is not an object in the wrong place but a validation
 failure naming the file and the path its id derives: a reader never guesses
@@ -1183,26 +1187,30 @@ directory — for them it is the enumeration mechanism, and they should treat it
 as potentially lagging the files.
 
 ```yaml
-# index.yaml — the root: the segments, and the current month's mints and retractions
+# index.yaml — the root: the segments, and the open months' mints and retractions
 format: dkf/0.2
 segments:
-  - index/legacy.yaml
-  - index/2024-08.yaml
-  - index/2024-11.yaml
-  - index/2026-08.yaml
-entries:                       # minted this month
+  - path: index/legacy.yaml
+    count: 1
+  - path: index/2024-08.yaml
+    count: 2
+  - path: index/2024-11.yaml
+    count: 1
+  - path: index/2026-08.yaml
+    count: 2
+entries:                       # minted in an open month: this month, or last
   - id: pub_01a0f3c1-4d20-7b8e-9a11-6c2f4e7d9b03
     type: publish
     scope: public
     claims:
       - clm_01916f03-b680-71a3-974f-9401ba374e1f
       - syn_01933034-b1a0-705f-b788-2c7c58c46e29
-retracted:                     # retracted this month, whenever minted
+retracted:                     # retracted in an open month or later, whenever minted
   - clm_01a01ed5-c040-73b0-ba7b-da8a27ab53a6
 ```
 
 ```yaml
-# index/2024-08.yaml — a sealed segment: that month's mints and that month's retractions
+# index/2024-08.yaml — a sealed segment (an id exists two months later): that month's mints and retractions
 format: dkf/0.2
 entries:
   - id: par_01916f03-b680-71a2-bad4-40b49d5a5a6d
@@ -1244,21 +1252,20 @@ entries:
 retracted: []
 ```
 
-The **current month is the month of the newest id** in the workspace, and
-nothing else — not the clock, and not any retraction's timestamp — so a
-rebuild is a function of the files alone: two implementations rebuilding on
-different days produce the same root and the same segments. The root's
-`retracted` holds every retraction dated in the current month *or later*: a
-retraction dated ahead of the newest mint waits in the root, visibly, until
-a mint passes its month, and only then seals into that month's segment.
-Sealing is driven by mints alone, which is what lets the minting guard and
-the retraction guard bound against one quantity. On the first rebuild
-after a later month's first mint, the previous month's entries and its
-retractions move out of the root into a new segment, `segments` gains its
-path, and the tail starts again — one large diff a month, the shape of a
-log rotating. A month earlier than the current one in which objects were
-retracted but none minted yields a segment with an empty `entries`, which
-is correct and slightly odd; a month with neither yields no segment. A
+The **open months are the newest id's month and the month before it**, and
+nothing else decides — not the clock, and not any retraction's timestamp —
+so a rebuild is a function of the files alone: two implementations
+rebuilding on different days produce the same root and the same segments.
+The root's `entries` holds both open months' mints, and its `retracted`
+every retraction dated in an open month *or later*: a retraction dated ahead
+of the newest mint waits in the root, visibly, until its month seals. A
+month seals when a mint lands two months after it: on the first rebuild
+after that, the older open month's entries and its retractions move out of
+the root into a new segment, `segments` gains its path and count, and the
+tail rolls forward — one large diff a month, the shape of a log rotating. A
+sealed month in which objects were retracted but none minted yields a
+segment with an empty `entries`, which is correct and slightly odd; a month
+with neither yields no segment. A
 segment is itself a valid index document, `format`, `entries` and
 `retracted` and nothing else, and once sealed it never changes.
 `index/legacy.yaml` carries `format` and `entries` only and is listed first.
@@ -1273,12 +1280,20 @@ one document every append rewrites, so an append grows with the history of
 retractions — which the principle above forbids. Keying each tombstone by
 the month the retraction *happened*, and carrying it in that month's
 segment, fixes both. Appending and retracting each rewrite the root, and
-the root holds one month's worth of each; nothing rewritten grows with
-history. Every sealed segment is byte-immutable without exception, which
-is what lets git leave its tree alone and lets a remote consumer fetch a
-segment once and cache it forever. "What changed since my last visit" is
-the root plus the segments newer than that visit — objects minted and
-objects retracted, both, in one read. And filtering is bounded by the
+the root holds two months' worth of each; nothing rewritten grows with
+history. Every sealed segment is byte-immutable in a workspace that
+validates, which is what lets git leave its tree alone and lets a remote
+consumer fetch a segment once and cache it forever — and "a workspace that
+validates" is any whose branches merge within a month of a boundary, which
+is every branch this format's own workspace has ever had. The count under
+`segments` is what makes the promise checkable: a rebuild lists each sealed
+month's directories and compares against the count, parsing nothing unless
+they differ, and a difference fails validation as a late merge. A remote
+consumer that sees a segment's count change in the root has its one signal
+to refetch that segment; a count that never changes is a segment it never
+needs again. "What changed since my last visit" is the root plus the
+segments newer than that visit — objects minted and objects retracted,
+both, in one read. And filtering is bounded by the
 period filtered and the months elapsed since it: an object cannot be
 retracted before it is minted, so an object minted in month M is retracted
 if and only if its id is in the `retracted` of the root or of a segment for
@@ -1325,13 +1340,16 @@ writer.
 Implementations are expected to provide an operation that rebuilds the index
 from the files, and a check that reports — without modifying anything —
 whether the committed index has drifted from the files, suitable for CI. In
-`dkf/0.2` the check is per document: the root against a regenerated tail,
-each month's segment against its regenerated self — from that month's mints
-and that month's retractions alone, so a sealed segment costs its own size
-and not the workspace's — and `index/legacy.yaml` against its own; in each
-document both `entries` and `retracted` are compared, an id in one list and
-not the other being drift; a segment listed and absent, or present
-and unlisted, is drift too. The check exists to catch the index lagging *changes to the workspace*, and
+`dkf/0.2` the check begins with counts: for each sealed month it compares a
+listing of that month's directories against the segment's recorded
+`count`, and a sealed segment whose count matches is not parsed at all; a
+count that does not match is a late merge, reported naming the files found
+in the directories and absent from the segment, and it fails validation.
+Then per document — the root against a regenerated tail, any differing
+segment against its regenerated self, and `index/legacy.yaml` against its
+own — both `entries` and `retracted` are compared, an id in one list and
+not the other being drift; a segment listed and absent, or present and
+unlisted, is drift too. The check exists to catch the index lagging *changes to the workspace*, and
 its tolerance follows from that rather than from which fields are optional.
 For a MAY field that mirrors an **immutable** property of the object —
 `scope`, `topics`, `timestamp`, `author`, `document-author` — a field
