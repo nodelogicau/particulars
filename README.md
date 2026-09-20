@@ -75,6 +75,16 @@ The time embedded in an id is the **minting** instant. The `timestamp` field on
 an object is the **assertion** time and may be earlier — for example when
 recording a dated document. Consumers MUST NOT require the two to agree.
 
+Every timestamp field — an object's `timestamp`, a retraction's, a record's,
+an index entry's — is an [RFC 3339](https://www.rfc-editor.org/rfc/rfc3339)
+`date-time`. Writers write the instant in UTC with the `Z` designator at
+seconds precision: `2026-08-20T09:02:00Z`. Readers accept any RFC 3339 form —
+a numeric offset, fractional seconds — and compare timestamps as instants,
+never as strings: `2026-08-20T09:02:00Z` is later than
+`2026-08-20T10:00:00+02:00`, and a string comparison says the opposite.
+Wherever this specification puts a timestamp in a calendar month, the month
+is the instant's month in UTC.
+
 Readers MUST accept any id matching `^(par|clm|syn|mrg|pub)_[A-Za-z0-9-]+$`, so
 that workspaces written with other schemes (including earlier drafts of this
 specification) remain readable. Validators MAY warn on ids that are not
@@ -991,7 +1001,9 @@ necessary: an implementation must not mint into a sealed month or date a
 retraction into one, and with a month of grace that takes a clock more than
 a month out. A retraction that was decided last month is recorded at the
 present with a `reason` that says when — the reason field is where that
-belongs.
+belongs. The month a retraction is dated into is the UTC month of its
+`timestamp`: `2026-09-01T00:30:00+02:00` is an August retraction, whatever
+the writer's wall clock said.
 
 What the grace period does not cover is a branch open across *two* or more
 boundaries. Such a merge adds a file to a sealed month's directory, and the
@@ -1550,7 +1562,10 @@ assertion.
 The payload is built from the parsed, *typed* data model, never from a
 generic YAML-to-JSON conversion — a YAML 1.2 parser returns an unquoted
 timestamp as a native time value, and only the typed model formats it back to
-the string this format requires. In the data model, keys are strings; values
+the string this format requires: the instant in UTC with `Z`, a fractional
+second only when non-zero and without trailing zeros, so
+`2026-08-20T11:02:00+02:00` and `2026-08-20T09:02:00Z` sign identically, as
+`0.9` and `0.90` do. In the data model, keys are strings; values
 are strings, numbers, booleans, arrays, and mappings; every field this
 specification defines as textual — timestamps, ids, references — is a string;
 `confidence` is a number. Aliases are resolved before the data model exists
@@ -1685,6 +1700,64 @@ implementation follows from it, not the other way around.
 See [CONTRIBUTING.md](CONTRIBUTING.md) for guidance on proposing changes,
 the RFC process for breaking changes, and how to submit a reference
 implementation.
+
+---
+
+## References
+
+**Standards borrowed as grammars.**
+[RFC 9562](https://www.rfc-editor.org/rfc/rfc9562) UUID version 7 for ids ·
+[RFC 3339](https://www.rfc-editor.org/rfc/rfc3339) timestamps ·
+[RFC 8785](https://www.rfc-editor.org/rfc/rfc8785) JSON Canonicalization
+Scheme for the signed payload ·
+[RFC 8141](https://www.rfc-editor.org/rfc/rfc8141) URN syntax for the
+unregistered `urn:dkf:` namespace ·
+[YAML 1.2](https://yaml.org/spec/1.2.2/) as the file format, and the reason
+the signed payload is built from the typed data model rather than from the
+parse ·
+[FIPS 180-4](https://csrc.nist.gov/pubs/fips/180-4/upd1/final) SHA-256 as the
+document hash writers write.
+
+**Identity schemes admitted as author URIs.**
+[ORCID](https://orcid.org) ·
+[W3C Decentralized Identifiers](https://www.w3.org/TR/did-core/), also the
+identity the reserved signature would bind ·
+a GitHub profile URL. These are examples of a URI that identifies a person,
+not requirements: any globally unique URI serves.
+
+**Protocol.**
+[Model Context Protocol](https://modelcontextprotocol.io), against which the
+tool surface and what the server tells the model are defined.
+
+**Models.**
+[OpenSpec](https://github.com/Fission-AI/OpenSpec), which records how a
+change was reasoned rather than the code's current state, the analogy The
+Approach draws ·
+[iCalendar](https://www.rfc-editor.org/rfc/rfc5545) and RSS, which specified
+the artefact and left the fetching to HTTP, the shape of the publishing
+contract.
+
+**Conceptual sources.** G. W. F. Hegel, *Science of Logic* (1812), on
+*Aufhebung*: a contradiction is not discarded but taken up, preserved and
+overcome in the position that resolves it, which is what a synthesis that
+carries its `inputs` does. The triad thesis, antithesis, synthesis, in the
+form The Approach uses, is J. G. Fichte's, *Foundations of the Entire
+Wissenschaftslehre* (1794); Hegel did not describe his own method in those
+words, and their attachment to him is Heinrich Moritz Chalybäus's, in
+*Historische Entwicklung der spekulativen Philosophie von Kant bis Hegel*
+(1837), as Gustav E. Mueller, "The Hegel Legend of
+'Thesis-Antithesis-Synthesis'", *Journal of the History of Ideas* (1958), set
+out. Lawrence Page, Sergey Brin, Rajeev Motwani and Terry Winograd, "The
+PageRank Citation Ranking: Bringing Order to the Web" (1999), on standing
+that accrues from being cited, behind citation weight.
+
+**Ecosystem.**
+[particulars-cli](https://github.com/nodelogicau/particulars-cli), the
+reference implementation, whose feedback shaped this text ·
+[particulars.fyi](https://particulars.fyi), a visual introduction ·
+[intentions](https://github.com/nodelogicau/intentions), the format that
+composes with this one: intentions is the prospective layer, what a person
+means to do, and this is the retrospective one, what is known.
 
 ---
 
