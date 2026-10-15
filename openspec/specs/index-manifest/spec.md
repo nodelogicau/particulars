@@ -18,7 +18,7 @@ The object and record YAML files SHALL be the source of truth. `index.yaml` SHAL
 - **THEN** the conflict is resolved by regenerating the index, with no hand-editing
 
 ### Requirement: Index entries carry a baseline and may be extended
-Each entry SHALL carry `id` and `type`; particulars SHALL carry `uri`; claims and syntheses SHALL carry `subject`; syntheses SHALL carry `inputs`; merges SHALL carry `uris`; publishes SHALL carry `claims` and `scope`. Entries MAY additionally carry `scope`, `topics`, `timestamp`, `author`, and `document-author`, the last two mirroring the object's `source.author` and `source.document.author` as written. In a `dkf/0.1` index entries MAY additionally carry `retracted: true`, and readers of a `dkf/0.1` index SHALL honour it; in a `dkf/0.2` index entries SHALL NOT carry it, retraction being recorded in the root's `retracted` list. Implementations MAY add further fields, and future versions of this specification MAY add further entry types; consumers SHALL ignore fields and entries they do not understand. An implementation that rebuilds the index SHALL preserve entries whose `type` it does not recognise, unchanged and in their canonical order, and SHALL preserve, on entries it does regenerate, fields it does not recognise; a drift check SHALL NOT report such entries or fields as differences.
+Each entry SHALL carry `id` and `type`; particulars SHALL carry `uri`; claims and syntheses SHALL carry `subject`; syntheses SHALL carry `inputs`; merges SHALL carry `uris`; publishes SHALL carry `claims` and `scope`. Entries MAY additionally carry `scope`, `topics`, `timestamp`, `author`, and `document-author`, the last two mirroring the object's `source.author` and `source.document.author` as written. In a `dkf/0.1` index entries MAY additionally carry `retracted: true`, and readers of a `dkf/0.1` index SHALL honour it; in a `dkf/0.2` index entries SHALL NOT carry it, retraction being recorded in the root's `retracted` list. Implementations MAY add further fields, except that no field SHALL carry an embedding vector or any other value whose content depends on which model produced it; such values belong in an uncommitted cache as defined in `recall-query`. Future versions of this specification MAY add further entry types; consumers SHALL ignore fields and entries they do not understand. An implementation that rebuilds the index SHALL preserve entries whose `type` it does not recognise, unchanged and in their canonical order, and SHALL preserve, on entries it does regenerate, fields it does not recognise; a drift check SHALL NOT report such entries or fields as differences.
 
 #### Scenario: Scope filtering from the index
 - **WHEN** entries carry `scope` and `knowledge_recall` is called with `scope: public`
@@ -51,6 +51,10 @@ Each entry SHALL carry `id` and `type`; particulars SHALL carry `uri`; claims an
 #### Scenario: A `dkf/0.1` entry flagged retracted
 - **WHEN** a `dkf/0.2` reader opens a `dkf/0.1` index whose entry carries `retracted: true`
 - **THEN** it treats the object as retracted, exactly as a `dkf/0.1` reader would
+
+#### Scenario: No embeddings in the index
+- **WHEN** an implementation that keeps a semantic cache rebuilds the index
+- **THEN** no entry carries an embedding vector or a model identifier, and the rebuilt index is identical to one written by an implementation with no cache
 ### Requirement: The index remains committed for remote consumers
 Publishers SHALL commit `index.yaml` so that HTTP consumers, who cannot list directories, can enumerate a workspace. Remote consumers SHALL treat it as potentially lagging the object files.
 
