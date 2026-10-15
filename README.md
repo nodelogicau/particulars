@@ -1340,9 +1340,14 @@ mirroring the object's `source.author` and `source.document.author` as
 written — so that `knowledge_recall` can filter without opening files. In a
 `dkf/0.1` index an entry MAY also carry `retracted: true`; in `dkf/0.2` it
 MUST NOT, retraction living in the `retracted` list of the month it happened.
-Implementations MAY add further fields, and future versions of this
-specification MAY add further entry types; consumers MUST ignore fields and
-entries they do not understand.
+Implementations MAY add further fields, except one carrying an embedding
+vector or any other value that depends on which model produced it: the index
+is committed, fetched by crawlers, and compared across implementations by
+the drift check, and two conformant writers running different models would
+never agree on it. Such values belong in the uncommitted [semantic
+cache](#recall-by-query). Future versions of this specification MAY add
+further entry types; consumers MUST ignore fields and entries they do not
+understand.
 
 An implementation that rebuilds the index MUST **preserve** entries whose
 `type` it does not recognise, unchanged and in their canonical order — a
@@ -1427,7 +1432,7 @@ areas.
 | Tool | Description |
 |---|---|
 | `particular_define(uri?, label, aliases[])` | Create or update a particular — a thing in the world, not a document being read; what was read belongs in `claim_assert`'s `source.document`. Idempotent on URI. Prefer an existing global URI that names an identity (a person's ORCID, a project's page), never reading matter. When `uri` is omitted one is minted from the label (see [Minting URIs](#minting-uris)). |
-| `particular_resolve(query)` | Find a particular by ID, URI, label, or alias. Returns null if no match; when a label or alias matches more than one particular, reports the candidates and resolves none. |
+| `particular_resolve(query)` | Find a particular by ID, URI, label, or alias. Returns null if no match; when a label or alias matches more than one particular, reports the candidates and resolves none. Matching is exact: it never uses a [semantic stage](#recall-by-query) and never returns a nearest candidate. |
 
 ### Claim Tools
 
@@ -1446,7 +1451,7 @@ areas.
 
 | Tool | Description |
 |---|---|
-| `knowledge_recall(particular_id \| query, author?, scope, include_retracted, limit)` | Retrieve claims and syntheses about a particular or topic, or by `author` — an id, URI, label, or alias — returning objects asserted by or reported from that particular's merge class, each carrying `relations` — a set of `asserted` and/or `reported`, never empty. Combinable with the other filters. Returns in lineage order, identifying `current`. Operates across merged particulars. |
+| `knowledge_recall(particular_id \| query, author?, scope, include_retracted, limit)` | Retrieve claims and syntheses about a particular or topic, or by `author` — an id, URI, label, or alias — returning objects asserted by or reported from that particular's merge class, each carrying `relations` — a set of `asserted` and/or `reported`, never empty. Combinable with the other filters. Returns in lineage order, identifying `current`. Operates across merged particulars. A `query` is first resolved to particulars and then recalled exactly as by particular, each result carrying `resolution` — `label`, `alias`, `lexical`, or `semantic` — saying how it was found (see [Recall by query](#recall-by-query)). |
 | `conflict_detect(particular_id \| claim_ids[])` | Return the structural `current` / `unsynthesised` / `stale` sets and a suggested synthesis priority (see [Conflict semantics](#conflict-semantics)). Judging actual contradiction is left to the harness. |
 | `lineage_trace(claim_id, depth)` | Traverse the provenance chain of any claim or synthesis, including `superseded-by` successors. Returns a structured tree. |
 
@@ -1464,6 +1469,80 @@ The typical LLM reasoning loop is:
 particular_resolve → knowledge_recall → conflict_detect
   → [reason internally] → synthesis_create
 ```
+
+### Recall by query
+
+`knowledge_recall` with a `query` instead of a `particular_id` runs in two
+stages. The first **resolves** the query to a set of particulars, each taken
+with its merge equivalence class. The second **recalls** each of them
+exactly as `knowledge_recall(particular_id)` would, with the same `author`,
+`scope` and `include_retracted` — so every object in the response comes from
+the second stage, in lineage order with `current` identified. Objects whose
+`content` matched are marked as matched inside their particular's results; a
+particular whose objects are all filtered out does not appear.
+
+Stage one returns particulars, never objects, and that is the point. A
+query that lands on a superseded claim returns the claim's subject — its
+current synthesis first, the claim marked as the reason — not the claim
+ranked above the belief that replaced it. And because every filter runs in
+stage two, against the files and the index, nothing stage one gets wrong can
+put a retracted or out-of-scope object in the response. It can only propose
+a particular that has nothing to show, or miss one.
+
+**The baseline.** Every implementation resolves a query without a model:
+under Unicode case folding, the whole query and each whitespace-separated
+term are matched as substrings against particular labels and aliases and
+against claim and synthesis `content`. The baseline runs on every query.
+Any other stage MAY add particulars and MUST NOT remove one the baseline
+found — embeddings are weak at exact identifiers, a ticket number or a
+surname, and the union means a name that is in the workspace always
+resolves. This is the posture of [conflict semantics](#conflict-semantics):
+the format defines what can be computed without an LLM, and leaves
+judgement to the harness. The baseline is linear in history; a free-text
+query is not a bounded operation in the sense of [Unbounded History,
+Bounded Work](#unbounded-history-bounded-work), and a cache is the remedy.
+
+**`resolution`.** Each particular in the response carries how it was
+found: `label` or `alias` when the whole query equals its label or one of
+its aliases under case folding; `lexical` when the baseline matched
+otherwise; `semantic` when only a semantic stage proposed it. A particular
+found several ways carries the first applicable value in that order, and
+when `limit` truncates, particulars are kept in that order before any
+other — an exact name is never cut to make room for a guess.
+
+**The semantic cache.** An implementation MAY keep embeddings of particular
+labels and aliases and of claim and synthesis `content`, and use them to
+propose particulars in stage one. The cache is a derived, regenerable
+cache like the index, with stricter rules, because what it holds depends on
+a model:
+
+- It records the identifier of the model that produced it, and is not
+  consulted when that differs from the model in use.
+- It is stored **outside the workspace directory tree** — the user's cache
+  directory keyed by `workspace.id` is the natural place — and is never
+  committed, published, or served. Outside the tree, there is no
+  `.gitignore` entry to forget and no static host that can serve it.
+- Validators and drift checks do not read it.
+- It is keyed by object id. Objects are immutable apart from retraction, so
+  a vector never needs recomputing under the same model, and the work after
+  a write or a pull is the ids in the index that the cache lacks.
+  Retracted objects may stay embedded: stage two removes them, so
+  retraction never touches the cache.
+
+A missing, partial or stale cache MUST NOT cause an object to be returned
+that recall by particular would not return. It MAY cause a particular to go
+unresolved that a complete cache would have proposed — less recall, never a
+wrong answer. A missing cache is not an error: recall falls back to the
+baseline.
+
+**Remote embedding.** An implementation MUST NOT send object content,
+labels or aliases to an embedding service on another host unless
+explicitly configured to, and that configuration names a **scope ceiling**,
+`public` by default: an object whose [effective scope](#trust-and-provenance)
+is narrower is not sent, and stays resolvable through the baseline. A claim
+promoted to public becomes eligible on the next update. The configuration
+is not read from `dkf.yaml` — `dkf.yaml` travels with the workspace, and
+whether this machine may call that service is a property of the machine.
 
 ### What the server tells the model
 
@@ -1654,7 +1733,9 @@ one this format can reason over.
 **Files over databases.** The canonical store is a directory of YAML files
 in a git repository. Git provides version history, authorship, and diff
 visibility for free. The index is a cache of the files, never the reverse.
-Databases are an implementation optimisation, not a requirement.
+Databases are an implementation optimisation, not a requirement — and so is
+a vector store, which may find the thing a question is about but never says
+what is true about it.
 
 ---
 
