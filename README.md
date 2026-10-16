@@ -23,9 +23,34 @@ as an error to eliminate rather than signal to preserve.
 
 ---
 
+## Purpose
+
+DKF is **semantic memory that keeps its provenance**: what is believed about
+things in the world, where every claim still says who asserted it, through
+which harness, from what, and how it is backed. That is what sets it apart.
+Memory usually forgets where it learned something, and a belief whose source
+is gone can only be overwritten, not weighed. Because DKF keeps the source, a
+contradiction is evidence on both sides, and the dialectic below is how it is
+reconciled.
+
+It is the **retrospective** layer, what is known.
+[intentions](https://github.com/nodelogicau/intentions) is the
+**prospective** one, what a person means to do. The two are coupled only
+through the URIs of the particulars they share. A claim can cite an
+intention and an intention can point at a claim, but neither format validates
+the other.
+
+**Episodic** and **procedural** memory are outside the format. An event can
+be a particular and have claims made about it, but a log of what happened is
+not DKF's job. Neither is how an agent does things: that lives in skills and
+prompts, and a workspace's [conventions document](#dkfmd) addresses an agent
+without constraining anything. Either could get a specification of its own.
+
+---
+
 ## The Approach
 
-DKF draws on the structure of Hegelian dialectic: a **thesis** is confronted by
+Keeping provenance is what lets DKF draw on the structure of Hegelian dialectic: a **thesis** is confronted by
 an **antithesis**, and their reconciliation produces a **synthesis** — a richer
 claim that carries the reasoning that produced it. That synthesis becomes the
 new thesis, available to be contradicted and refined again.
@@ -1840,8 +1865,7 @@ that accrues from being cited, behind citation weight.
 reference implementation, whose feedback shaped this text ·
 [particulars.fyi](https://particulars.fyi), a visual introduction ·
 [intentions](https://github.com/nodelogicau/intentions), the format that
-composes with this one: intentions is the prospective layer, what a person
-means to do, and this is the retrospective one, what is known.
+composes with this one for the prospective layer — see [Purpose](#purpose).
 
 ---
 
