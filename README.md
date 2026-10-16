@@ -1514,26 +1514,63 @@ stage two, against the files and the index, nothing stage one gets wrong can
 put a retracted or out-of-scope object in the response. It can only propose
 a particular that has nothing to show, or miss one.
 
-**The baseline.** Every implementation resolves a query without a model:
-under Unicode case folding, the whole query and each whitespace-separated
-term are matched as substrings against particular labels and aliases and
-against claim and synthesis `content`. The baseline runs on every query.
-Any other stage MAY add particulars and MUST NOT remove one the baseline
-found — embeddings are weak at exact identifiers, a ticket number or a
-surname, and the union means a name that is in the workspace always
-resolves. This is the posture of [conflict semantics](#conflict-semantics):
-the format defines what can be computed without an LLM, and leaves
-judgement to the harness. The baseline is linear in history; a free-text
-query is not a bounded operation in the sense of [Unbounded History,
-Bounded Work](#unbounded-history-bounded-work), and a cache is the remedy.
+**The baseline.** Every implementation resolves a query without a model,
+under Unicode case folding, against particular labels and aliases and
+against claim and synthesis `content`. A query's terms are its runs of
+non-whitespace characters. From each term, and from the whole query, the
+leading and trailing characters of Unicode general category P —
+punctuation — are removed, as written and before folding; interior
+characters are kept. Agents send questions, and without the trim the term a
+question most depends on, `timeout?`, matches no claim that says "timeout";
+with it, `PROJ-1234.` still finds `PROJ-1234`, and `v1.2.3`, `o'brien` and
+`auth/session` match as written. A term that is empty after trimming is
+ignored, and a query that is empty after trimming — `?!` — resolves nothing,
+which is not an error; the empty string is a substring of everything.
+
+Terms combine by OR. A text matches when the trimmed whole query, or any
+one trimmed term, occurs in it; a particular is resolved when its label, an
+alias, or the `content` of one of its claims or syntheses matches, and an
+object that matches is marked as matched. AND would make recall depend on
+every word of a question appearing in one claim, so `what is the session
+timeout` would resolve nothing; precision comes from the order below, not
+from refusing to resolve.
+
+The baseline runs on every query. Any other stage MAY add particulars and
+MUST NOT remove one the baseline found — embeddings are weak at exact
+identifiers, a ticket number or a surname, and the union means a name that
+is in the workspace always resolves. This is the posture of [conflict
+semantics](#conflict-semantics): the format defines what can be computed
+without an LLM, and leaves judgement to the harness. Stemming, stopwords and
+possessives are not the baseline's business; `dog's` does not find "dog".
+The baseline is linear in history; a free-text query is not a bounded
+operation in the sense of [Unbounded History, Bounded
+Work](#unbounded-history-bounded-work), and a cache is the remedy.
 
 **`resolution`.** Each particular in the response carries how it was
-found: `label` or `alias` when the whole query equals its label or one of
-its aliases under case folding; `lexical` when the baseline matched
-otherwise; `semantic` when only a semantic stage proposed it. A particular
-found several ways carries the first applicable value in that order, and
-when `limit` truncates, particulars are kept in that order before any
-other — an exact name is never cut to make room for a guess.
+found: `label` or `alias` when its label or one of its aliases, folded,
+occurs in the folded query with nothing but punctuation around it; `lexical`
+when the baseline matched otherwise; `semantic` when only a semantic stage
+proposed it. So `Project X?` and `"Project X"` are exact for the label
+`Project X`, and `C#?` for the label `C#`, while `C` is not exact for `C#`.
+Trimming both sides and comparing would have been simpler and wrong: `C#`
+trims to `C`, and the query `C` would become an exact match for it. A
+particular found several ways carries the first applicable value in that
+order.
+
+The response is ordered, because `limit` cuts it and the order decides what
+survives. Particulars come in `resolution` order — `label`, `alias`,
+`lexical`, `semantic` — so an exact name is never cut to make room for a
+guess. Within `label`, `alias` and `lexical` the order is fixed, so that two
+implementations given the same workspace and query return the same
+particulars: first those where the trimmed whole query matches, then those
+matching more distinct trimmed terms, then by ascending particular id — the
+lowest id of a merge class. Terms count against the particular's label, its
+aliases, and the objects in its *response*, never against an object the
+filters removed: a retracted or out-of-scope claim does not decide what the
+caller sees. That ranks `auth timeout` above `the` with no corpus statistic.
+Within `semantic` the order is the implementation's, since it depends on a
+model by definition. When `limit` truncates, the first particulars in this
+order are kept.
 
 **The semantic cache.** An implementation MAY keep embeddings of particular
 labels and aliases and of claim and synthesis `content`, and use them to
