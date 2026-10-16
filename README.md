@@ -1766,6 +1766,9 @@ author has a URI.
 A reference implementation,
 [`particulars-cli`](https://github.com/nodelogicau/particulars-cli), exists
 and its feedback shaped the current text.
+[`particulars-bench`](https://github.com/nodelogicau/particulars-bench)
+measures any implementation as memory for an agent on LongMemEval, depending
+only on this specification and MCP; its results are not normative.
 
 Feedback on the spec itself — object model, field names, missing cases — is
 the most valuable contribution at this stage.
