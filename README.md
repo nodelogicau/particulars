@@ -1523,9 +1523,16 @@ punctuation — are removed, as written and before folding; interior
 characters are kept. Agents send questions, and without the trim the term a
 question most depends on, `timeout?`, matches no claim that says "timeout";
 with it, `PROJ-1234.` still finds `PROJ-1234`, and `v1.2.3`, `o'brien` and
-`auth/session` match as written. A term that is empty after trimming is
-ignored, and a query that is empty after trimming — `?!` — resolves nothing,
-which is not an error; the empty string is a substring of everything.
+`auth/session` match as written. Whitespace — the same Unicode `White_Space`
+property the split uses, so a tab or a trailing line feed as well as a
+space — is trimmed from the edges of the whole query too: a client that
+passes a line of input through unchanged, or a caller who types
+`Project X ?` in French typography, gets the same resolution and the same
+order as one who does not. Interior whitespace is kept, so `auth timeout`
+is still a phrase. A term that is empty after trimming is ignored, and a
+query that is empty after trimming — `?!`, or three spaces — resolves
+nothing, which is not an error; the empty string is a substring of
+everything.
 
 Terms combine by OR. A text matches when the trimmed whole query, or any
 one trimmed term, occurs in it; a particular is resolved when its label, an
@@ -1548,21 +1555,32 @@ Work](#unbounded-history-bounded-work), and a cache is the remedy.
 
 **`resolution`.** Each particular in the response carries how it was
 found: `label` or `alias` when its label or one of its aliases, folded,
-occurs in the folded query with nothing but punctuation around it; `lexical`
-when the baseline matched otherwise; `semantic` when only a semantic stage
-proposed it. So `Project X?` and `"Project X"` are exact for the label
-`Project X`, and `C#?` for the label `C#`, while `C` is not exact for `C#`.
-Trimming both sides and comparing would have been simpler and wrong: `C#`
-trims to `C`, and the query `C` would become an exact match for it. A
-particular found several ways carries the first applicable value in that
-order.
+occurs in the folded query with nothing but punctuation and whitespace
+around it; `lexical` when the baseline matched otherwise; `semantic` when
+only a semantic stage proposed it. So `Project X?`, `"Project X"`,
+`Project X ?` and `Project X` with a leading space or a trailing line feed
+are exact for the label `Project X`, and `C#?` for the label `C#`, while `Project  X` with two
+spaces is not, and `C` is not exact for `C#`. Trimming both sides and
+comparing would have been simpler and wrong: `C#` trims to `C`, and the
+query `C` would become an exact match for it. A particular found several
+ways carries the first applicable value in that order.
+
+The rule runs both ways, so the label `C` is exact for the query `C#` as
+well: the `#` around its occurrence is punctuation. Telling a name's `#`
+from a trailing one would mean consulting the other labels in the
+workspace, and one particular's `resolution` would then depend on which
+others exist. The rule is left as it is and the order settles it instead.
 
 The response is ordered, because `limit` cuts it and the order decides what
 survives. Particulars come in `resolution` order — `label`, `alias`,
 `lexical`, `semantic` — so an exact name is never cut to make room for a
 guess. Within `label`, `alias` and `lexical` the order is fixed, so that two
 implementations given the same workspace and query return the same
-particulars: first those where the trimmed whole query matches, then those
+particulars. Within `label` and `alias`, those whose longest exact label or
+alias is longer come first, counted in code points after folding, so `C#`
+is kept over `C` for the query `C#` — the later keys cannot separate them,
+since both labels contain the trimmed query `c`. Then, within all three,
+first those where the trimmed whole query matches, then those
 matching more distinct trimmed terms, then by ascending particular id — the
 lowest id of a merge class. Terms count against the particular's label, its
 aliases, and the objects in its *response*, never against an object the
