@@ -30,7 +30,7 @@ Defines `knowledge_recall` called with a free-text `query`: resolution to partic
 - **THEN** the claim is marked as matched
 
 ### Requirement: Each result says how it was resolved
-Each particular in a recall-by-query response SHALL carry `resolution`, one of `label`, `alias`, `lexical`, or `semantic`: `label` or `alias` when the particular's label or one of its aliases, under case folding, occurs in the case-folded query such that every character of the query outside that occurrence is of Unicode general category P; `lexical` when the baseline matched otherwise; `semantic` when only a semantic stage proposed it. A particular resolved more than one way SHALL carry the first applicable value in that order. Particulars SHALL be ordered by `resolution` in that order. Within `label`, `alias`, and `lexical`, particulars SHALL be ordered first by whether the trimmed whole query matches the particular's label, an alias, or the `content` of an object in its response, those that match first; then by the number of distinct trimmed terms, after case folding, that match any of those, more first; then by ascending particular id, taking the lowest id of a merge class. Within `semantic` the order is implementation-defined. When `limit` truncates, the first particulars in this order SHALL be kept.
+Each particular in a recall-by-query response SHALL carry `resolution`, one of `label`, `alias`, `lexical`, or `semantic`: `label` or `alias` when the particular's label or one of its aliases, under case folding, occurs in the case-folded query such that every character of the query outside that occurrence is of Unicode general category P or has the Unicode `White_Space` property; `lexical` when the baseline matched otherwise; `semantic` when only a semantic stage proposed it. A particular resolved more than one way SHALL carry the first applicable value in that order. Particulars SHALL be ordered by `resolution` in that order. Within `label` and `alias`, particulars SHALL be ordered first by the length, in code points after case folding, of the longest label or alias that makes the particular exact, longer first. Within `label`, `alias`, and `lexical`, particulars SHALL then be ordered by whether the trimmed whole query matches the particular's label, an alias, or the `content` of an object in its response, those that match first; then by the number of distinct trimmed terms, after case folding, that match any of those, more first; then by ascending particular id, taking the lowest id of a merge class. Within `semantic` the order is implementation-defined. When `limit` truncates, the first particulars in this order SHALL be kept.
 
 #### Scenario: Exact alias
 - **WHEN** a particular has alias `DKF` and the query is `dkf`
@@ -76,8 +76,28 @@ Each particular in a recall-by-query response SHALL carry `resolution`, one of `
 - **WHEN** `par_A`'s only claim containing "timeout" is retracted and the call has `include_retracted: false`
 - **THEN** "timeout" does not count toward `par_A`'s distinct terms
 
+#### Scenario: Whitespace beside a name is still exact
+- **WHEN** a particular has label `Project X` and the query is `Project X ?`
+- **THEN** its `resolution` is `label`
+
+#### Scenario: A line of input is still exact
+- **WHEN** a particular has label `Project X` and the query is a space, `Project X`, and a line feed
+- **THEN** its `resolution` is `label`
+
+#### Scenario: Interior whitespace is kept
+- **WHEN** a particular has label `Project X` and the query is `Project  X` with two spaces
+- **THEN** its `resolution` is not `label`
+
+#### Scenario: Edge whitespace does not change the order
+- **WHEN** the query is `auth timeout ` with a trailing space, and `par_A`'s response contains "auth timeout" only at the end of a claim's content
+- **THEN** `par_A` counts as matching the whole query
+
+#### Scenario: The longer exact name ranks first
+- **WHEN** `par_C` has label `C`, `par_S` has label `C#`, `par_C` has the lower id, the query is `C#`, and `limit` is 1
+- **THEN** both are exact, `par_S` is in the response, and `par_C` is not
+
 ### Requirement: A lexical baseline is required and always runs
-Every implementation SHALL resolve a query, without a model, by matching it under Unicode case folding against particular labels and aliases and against claim and synthesis `content`. The query's terms SHALL be its maximal runs of characters without the Unicode `White_Space` property. Before matching, leading and trailing characters of Unicode general category P SHALL be removed from the whole query and from each term, as written and before case folding; interior characters SHALL be kept. A term that is empty after removal SHALL be ignored. A text SHALL match when the trimmed whole query, or any one trimmed term, is a substring of it; a particular SHALL be resolved by the baseline when its label, one of its aliases, or the `content` of one of its claims or syntheses matches. A query that is empty after removal SHALL resolve no particular and SHALL NOT be an error. The baseline SHALL run on every recall by query, whether or not any other stage is available. Another stage MAY add particulars to the resolved set and SHALL NOT remove any the baseline found.
+Every implementation SHALL resolve a query, without a model, by matching it under Unicode case folding against particular labels and aliases and against claim and synthesis `content`. The query's terms SHALL be its maximal runs of characters without the Unicode `White_Space` property. Before matching, leading and trailing characters that are of Unicode general category P or have the Unicode `White_Space` property SHALL be removed from the whole query and from each term, as written and before case folding; interior characters SHALL be kept. A term that is empty after removal SHALL be ignored. A text SHALL match when the trimmed whole query, or any one trimmed term, is a substring of it; a particular SHALL be resolved by the baseline when its label, one of its aliases, or the `content` of one of its claims or syntheses matches. A query that is empty after removal SHALL resolve no particular and SHALL NOT be an error. The baseline SHALL run on every recall by query, whether or not any other stage is available. Another stage MAY add particulars to the resolved set and SHALL NOT remove any the baseline found.
 
 #### Scenario: No model available
 - **WHEN** an implementation has no embedding model and `knowledge_recall(query: "Timeout")` is called on a workspace with a claim containing "timeout"
@@ -106,6 +126,14 @@ Every implementation SHALL resolve a query, without a model, by matching it unde
 #### Scenario: A query of punctuation alone
 - **WHEN** the query is `?!`
 - **THEN** no particular is resolved, the response is empty, and no error is raised
+
+#### Scenario: A query of whitespace alone
+- **WHEN** the query is three spaces
+- **THEN** no particular is resolved, the response is empty, and no error is raised
+
+#### Scenario: A label of punctuation alone
+- **WHEN** a particular has label `?` and the query is `?!`
+- **THEN** that particular is not resolved, because the query is empty after removal
 
 ### Requirement: A semantic cache is optional, derived, and never authoritative
 An implementation MAY keep a cache of embeddings of particular labels and aliases and of claim and synthesis `content`, and MAY use it to propose particulars in the resolution stage. The cache SHALL be fully regenerable from the workspace files. It SHALL record the identifier of the model that produced it and SHALL NOT be consulted when that differs from the model in use. It SHALL be stored outside the workspace directory tree, SHALL NOT be committed, and SHALL NOT be published or served to consumers. Validators and drift checks SHALL NOT read it. A missing, partial, or stale cache SHALL NOT cause an object to be returned that recall by particular would not return; it MAY cause a particular to be unresolved that a complete cache would have proposed.
