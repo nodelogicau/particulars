@@ -42,9 +42,12 @@ the other.
 
 **Episodic** and **procedural** memory are outside the format. An event can
 be a particular and have claims made about it, but a log of what happened is
-not DKF's job. Neither is how an agent does things: that lives in skills and
-prompts, and a workspace's [conventions document](#dkfmd) addresses an agent
-without constraining anything. Either could get a specification of its own.
+not DKF's job. Neither is know-how, the habits and practised skills a person
+exercises rather than recalls. A harness's own know-how lives in skill files
+and prompts, and a workspace's [conventions document](#dkfmd) addresses an
+agent without constraining anything. Either memory could get a specification
+of its own. Why the family models memory as several kinds, and what each is
+for, is argued in [Forgetting](https://github.com/nodelogicau/forgetting).
 
 ---
 
@@ -1920,7 +1923,10 @@ that accrues from being cited, behind citation weight.
 reference implementation, whose feedback shaped this text ·
 [particulars.fyi](https://particulars.fyi), a visual introduction ·
 [intentions](https://github.com/nodelogicau/intentions), the format that
-composes with this one for the prospective layer — see [Purpose](#purpose).
+composes with this one for the prospective layer — see [Purpose](#purpose) ·
+[Forgetting](https://github.com/nodelogicau/forgetting), the whitepaper on
+why the family models memory as several kinds, which belongs to neither
+format.
 
 ---
 
