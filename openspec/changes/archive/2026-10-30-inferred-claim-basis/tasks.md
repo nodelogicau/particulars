@@ -30,5 +30,5 @@
   - index entries carrying `basis`;
   - the skill text.
 - [x] 3.3 Comment on #42 linking the change, and close it when the change is archived. Commented 2026-10-30; closing happens at archive.
-- [ ] 3.4 Update Forgetting §9 when the change is archived: the rule-to-episodes link becomes a basis, and the draft note on induction is settled.
-- [ ] 3.5 Record in particulars-knowledge when the change is merged: an inferred claim can now name its basis, and staleness reaches inferred claims through it (#42).
+- [x] 3.4 Update Forgetting §9 when the change is archived: the rule-to-episodes link becomes a basis, and the draft note on induction is settled. Done 2026-10-30 in nodelogicau/forgetting 634ff1c.
+- [x] 3.5 Record in particulars-knowledge when the change is merged: an inferred claim can now name its basis, and staleness reaches inferred claims through it (#42). Recorded 2026-10-30 as clm_01a18c55-dbc2-70bb-b261-1df6d26a46b2, merged in particulars-knowledge#46.
