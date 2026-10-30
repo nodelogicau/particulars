@@ -563,6 +563,68 @@ something that sorts and aggregates; where it matters it belongs in
 `undeclared` claim is reported as unverified rather than rejected — every
 existing workspace has some.
 
+#### What an inference rests on
+
+An `observed` claim points at its evidence through `source.document`. An
+`inferred` claim's evidence is other claims, and **`basis`** names them: a
+non-empty list of the ids of the claims and syntheses it was inferred from.
+An empty `basis` fails validation: it would mean nothing that absence doesn't.
+
+```yaml
+id: clm_01a1b2c3-4d5e-7f60-8a9b-0c1d2e3f4a5b
+type: claim
+subject: par_01a1b2c3-4d5e-7f60-8a9b-0c1d2e3f4a50
+content: |
+  Certificate renewals go wrong when the DNS TTL is long.
+source:
+  author: ben
+  harness: claude
+context:
+  scope: organisation
+  topics:
+    - operations
+timestamp: 2026-10-30T09:00:00Z
+evidential: inferred
+basis:
+  - clm_01a0f1e2-3d4c-7b5a-9f8e-7d6c5b4a3f21
+  - clm_01a12c3d-4e5f-7a6b-8c9d-0e1f2a3b4c5d
+  - clm_01a17e8f-9a0b-7c1d-8e2f-3a4b5c6d7e8f
+confidence: 0.7
+```
+
+A basis is evidence, not a set of synthesis inputs. It carries ids only, with
+no `role` or `weight`, because nothing in it is a thesis or an antithesis.
+And it changes nothing about which synthesis is `current`. The rules:
+
+- **Only an `inferred` claim carries one.** An `observed` claim's evidence is
+  a document, a `held` claim has none by definition, and a synthesis has
+  `inputs`. Writers refuse a basis anywhere else. A file that carries one
+  anyway fails validation as `basis_not_inferred`, but is still read, for the
+  same reason as `confidence_on_held`.
+- **It cites existing DKF objects.** Each id must be a claim or synthesis in
+  the workspace, and a dangling id fails validation. A basis may cite a
+  retracted object; the claim is then stale from the start, which is the
+  honest report. A basis never cites the claim that carries it, or an object
+  of another format. Something outside DKF is reached through an `observed`
+  claim about it, whose `source.document` cites it.
+- **Citing is not synthesising.** What a basis names stays `unsynthesised`,
+  and retracting it makes the inferred claim `stale` (see
+  [Conflict semantics](#conflict-semantics)).
+- **Absence is reported, not refused.** An `inferred` claim without a basis
+  is valid. Validators report it as `inferred_without_basis`, a fact about the
+  corpus, in aggregate, since no existing claim can be given one, and
+  `claim_assert` warns when it writes one.
+
+**Induction is an inferred claim with a basis.** A rule of thumb drawn from
+several instances, such as the claim above, lists the instances as its
+basis. There is no synthesis `method` for induction, because a synthesis
+becomes `current` for its subject, and one rule of thumb is a belief about a
+subject, not the reconciled whole. A later counterexample is reconciled as
+any disagreement is, usually as a `qualification` synthesis citing the rule
+and the counterexample. How many instances a rule rests on, and how recent
+they are, is read from its basis and their timestamps. It is not recorded
+separately, where it could drift from the basis.
+
 Claims are immutable once created. Correction happens through synthesis or
 retraction, never overwriting. Retraction is recorded, not deletion —
 provenance must always be traversable.
@@ -829,7 +891,9 @@ the file a naive consumer already opens — or by retracting the object.
 claims it cites, so a public consumer may receive a synthesis citing input ids
 it cannot resolve. That is the intended default: cascading would silently
 widen an entire lineage, and promotion is meant to be explicit and deliberate.
-Publishers who want a traversable public chain promote the inputs too.
+Publishers who want a traversable public chain promote the inputs too. The
+same holds for an inferred claim's `basis`: promoting the claim leaves its
+basis where it was.
 
 **A synthesis may be wider than its inputs, and that is warned rather than
 forbidden.** Reconciling narrowly-scoped evidence into a conclusion that can
@@ -848,6 +912,11 @@ For the same reason the condition belongs to workspace state rather than to
 the synthesis file — a promotion can create it, or clear it, without either
 file changing. Implementations evaluate it when a synthesis is created, when
 `knowledge_publish` promotes one, and during validation.
+
+An inferred claim's `basis` counts as its inputs here. Its content may restate
+what its basis says, so an inferred claim wider than any basis member is
+reported as `scope_wider_than_inputs` in the same way, evaluated at the same
+three moments, and is never rejected for it.
 
 A promotion is retracted like any record, after which the objects it covered
 revert to their asserted scope and leave future feeds. Retraction cannot
@@ -887,9 +956,11 @@ that. For a particular (or merge equivalence class):
 - **current** — the most recent non-retracted synthesis whose `subject` is in
   the class, ordered by `timestamp`, ties broken by id.
 - **unsynthesised** — non-retracted claims and syntheses with `subject` in the
-  class that are not in the transitive `inputs` of `current`.
-- **stale** — non-retracted syntheses with `subject` in the class that cite a
-  retracted input, directly or transitively.
+  class that are not in the transitive `inputs` of `current`. The transitive
+  `inputs` follow synthesis `inputs` only, not a claim's `basis`.
+- **stale** — non-retracted claims and syntheses with `subject` in the class
+  that cite a retracted object, directly or transitively, through `inputs` or
+  `basis`.
 
 **The current belief about a particular is `current`**, even when claims
 post-date it. Those later claims are not silently the new belief; they are
@@ -914,6 +985,15 @@ Two consequences follow:
   `unsynthesised` like any other.
 - **Cross-particular inputs are per class.** A claim about Y cited by a
   synthesis about X is not thereby synthesised for Y.
+- **Citing in a basis is not synthesis.** What an inferred claim's `basis`
+  names stays `unsynthesised`, for its own particular or any other. A
+  synthesis that cites an inferred claim has reconciled that claim, not the
+  basis behind it. Retracting something in a basis makes the inferred claim
+  `stale`, and any synthesis citing it stale too. Claims are immutable, so a
+  stale inferred claim leaves the set only when it is retracted, usually with
+  `superseded-by` pointing at a claim whose basis is revised. Readers that
+  predate `basis` miss this staleness but read every file: their sets are a
+  subset of these, never a contradiction.
 
 Merge records take part in this, because they decide which particulars share a
 class. Promotion records do not: they are not knowledge, they form no class,
@@ -1361,7 +1441,9 @@ writer creates such objects and their number is fixed at migration. In a
 it there.
 
 Baseline fields: every entry has `id` and `type`; particulars have `uri`;
-claims and syntheses have `subject`; syntheses have `inputs`; merges have
+claims and syntheses have `subject`; syntheses have `inputs`; claims that
+carry a `basis` have `basis`, so staleness through a basis can be computed from
+the index alone; merges have
 `uris`; promotions have `claims` and `scope`. Entries MAY also carry `scope`,
 `topics`, `timestamp`, and `author` and `document-author` — the last two
 mirroring the object's `source.author` and `source.document.author` as
@@ -1466,7 +1548,7 @@ areas.
 
 | Tool | Description |
 |---|---|
-| `claim_assert(particular_id, content, evidential, source, context, confidence, scope)` | Create a new claim. The subject is the thing in the world the fact is about — never the document or feed it was read in — and `content` states the fact; what was read belongs in `source.document`. `evidential` is required and has no default; `held` with a `confidence` is refused. If scope is omitted the workspace default (or `personal`) is written into the file. |
+| `claim_assert(particular_id, content, evidential, basis, source, context, confidence, scope)` | Create a new claim. The subject is the thing in the world the fact is about — never the document or feed it was read in — and `content` states the fact; what was read belongs in `source.document`. `evidential` is required and has no default; `held` with a `confidence` is refused. `basis` lists the claims and syntheses an `inferred` claim was inferred from; it is refused unless `evidential` is `inferred`, and an `inferred` claim without one is written with an `inferred_without_basis` warning. If scope is omitted the workspace default (or `personal`) is written into the file. |
 | `claim_retract(claim_id, reason, source)` | Append a `retracted` block to a claim or synthesis. Never deletes — provenance is preserved. |
 
 ### Synthesis Tools
@@ -1481,7 +1563,7 @@ areas.
 |---|---|
 | `knowledge_recall(particular_id \| query, author?, scope, include_retracted, limit)` | Retrieve claims and syntheses about a particular or topic, or by `author` — an id, URI, label, or alias — returning objects asserted by or reported from that particular's merge class, each carrying `relations` — a set of `asserted` and/or `reported`, never empty. Combinable with the other filters. Returns in lineage order, identifying `current`. Operates across merged particulars. A `query` is first resolved to particulars and then recalled exactly as by particular, each result carrying `resolution` — `label`, `alias`, `lexical`, or `semantic` — saying how it was found (see [Recall by query](#recall-by-query)). |
 | `conflict_detect(particular_id \| claim_ids[])` | Return the structural `current` / `unsynthesised` / `stale` sets and a suggested synthesis priority (see [Conflict semantics](#conflict-semantics)). Judging actual contradiction is left to the harness. |
-| `lineage_trace(claim_id, depth)` | Traverse the provenance chain of any claim or synthesis, including `superseded-by` successors. Returns a structured tree. |
+| `lineage_trace(claim_id, depth)` | Traverse the provenance chain of any claim or synthesis — synthesis `inputs` by role, an inferred claim's `basis` labelled `basis`, and `superseded-by` successors — visiting each object once. Returns a structured tree. |
 
 ### Federation Tools
 
@@ -1772,9 +1854,11 @@ never expose too much.
 distinction governs how it is reported. A *finding about an object* is
 something someone might act on at that object — drift on a claim's source, a
 synthesis wider than its inputs, an unverifiable defect, a dangling
-reference — and is reported per object, because the object is the unit of
+reference (including a dangling `basis` id), a `basis` on a claim that isn't
+`inferred` (`basis_not_inferred`) — and is reported per object, because the object is the unit of
 action. A *fact about the corpus* carries no per-object action — an
-`undeclared` evidential, a legacy compatibility marker, a document that
+`undeclared` evidential, an inferred claim without a basis
+(`inferred_without_basis`), a legacy compatibility marker, a document that
 cannot be verified, an author name that resolves to no particular or to
 several — and is reported in aggregate: its discovery value is spent the
 first time it is seen, its cost recurs on every run, and it cannot be
