@@ -1,7 +1,10 @@
 # particulars.fyi
 
-The landing page for Particulars: one hand-written HTML file, no build step, no
-JavaScript, no external requests. Served by GitHub Pages from this `docs/`
+The website for Particulars: hand-written HTML files, no build step, no
+JavaScript, no external requests. `index.html` is the landing page;
+`okf/index.html` (served at `/okf/`) compares particulars with Google Cloud's
+Open Knowledge Format. Each page embeds its own CSS, so a page never loads
+another file. Served by GitHub Pages from this `docs/`
 directory on `main`, with the custom domain in `CNAME`.
 
 ## Deployment
@@ -42,3 +45,20 @@ python3 docs/proof-graph.py export.mmd docs/index.html
 `--scope organisation` keeps personal knowledge out at the tool level. After
 running, update the totals in the section-4 lead paragraph and the caption
 date. The script refuses a graph with unsynthesised nodes — reconcile first.
+
+## Keeping the OKF comparison current
+
+`okf/index.html` names an external spec that is still changing, so it carries
+a version stamp and a last-checked date. When OKF publishes a new version:
+
+1. Re-read `SPEC.md` in
+   [GoogleCloudPlatform/open-knowledge-format](https://github.com/GoogleCloudPlatform/open-knowledge-format)
+   at a pinned commit.
+2. In `particulars-knowledge`, record what changed as claims about
+   *Open Knowledge Format* (quote + `--document-hash`), then a synthesis.
+3. Update the page: statements, the commit-pinned spec links, the version
+   stamp and the last-checked date. Every OKF statement on the page must have
+   a claim behind it; a statement with none is cut.
+
+The landing page links to `/okf/` once, from the "Docs with expiry dates"
+card, with category wording. Its own prose still names no competitor.
