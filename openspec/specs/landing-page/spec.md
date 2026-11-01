@@ -1,10 +1,10 @@
 # landing-page Specification
 
 ## Purpose
-Defines the public single-page website at particulars.fyi: its practitioner-facing content narrative, visual and accessibility requirements, self-containment constraints, and GitHub Pages hosting with the custom domain. This capability governs a publishing surface for the format, not the format itself.
+Defines the landing page of the public website at particulars.fyi: its practitioner-facing content narrative, visual and accessibility requirements, self-containment constraints, and GitHub Pages hosting with the custom domain. This capability governs a publishing surface for the format, not the format itself.
 ## Requirements
 ### Requirement: Page narrative
-The site SHALL consist of a single page presenting, in order: (1) a hero with the tagline "Knowledge that doesn't go stale" and the dialectic triad as its graphic, (2) a "one fact, two fates" panel contrasting how ordinary memory and particulars handle a fact that changes, (3) the human/agent collaboration loop in which everything an agent writes is a proposal until a human merges it, (4) proof drawn from the project's real workspace, and (5) a quickstart with links to the spec, the CLI, and the v0.1 release.
+The landing page SHALL present, in order: (1) a hero with the tagline "Knowledge that doesn't go stale" and the dialectic triad as its graphic, (2) a "one fact, two fates" panel contrasting how ordinary memory and particulars handle a fact that changes, (3) the human/agent collaboration loop in which everything an agent writes is a proposal until a human merges it, (4) proof drawn from the project's real workspace, and (5) a quickstart with links to the spec, the CLI, and the v0.1 release. The site MAY include separate pages besides the landing page (such as the OKF comparison page). The landing page's narrative SHALL NOT depend on them.
 
 #### Scenario: Visitor absorbs the pitch from visuals alone
 - **WHEN** a visitor scrolls the page reading only headlines, diagrams, and captions
@@ -85,4 +85,11 @@ The page SHALL use semantic HTML with a heading hierarchy, provide text alternat
 #### Scenario: Screen reader pass
 - **WHEN** the page is traversed with a screen reader
 - **THEN** each section is announced via its heading and each diagram conveys its meaning through an accessible name or adjacent caption
+
+### Requirement: Category-worded link to the comparison page
+The landing page SHALL contain exactly one link to the OKF comparison page, placed with the "Docs with expiry dates" category card. The link text SHALL name the category, not a product, so that it complies with the Category-based differentiation requirement.
+
+#### Scenario: Link present and name-free
+- **WHEN** the landing page is searched for links to `/okf/`
+- **THEN** exactly one is found, beside the expiry-dates card, and neither its text nor its accessible name contains "OKF" or any other product name
 
