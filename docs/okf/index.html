@@ -1,0 +1,383 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Particulars and OKF</title>
+<meta name="description" content="How particulars (the Dialectical Knowledge Format) and Google Cloud's Open Knowledge Format differ in how a belief changes, and how the two compose.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cpolygon points='16,3 29,16 16,29 3,16' fill='%230e8a6d'/%3E%3C/svg%3E">
+<!--
+  Comparison page (openspec change add-okf-comparison-page).
+  Every statement about OKF is checked against OKF's SPEC.md at
+  GoogleCloudPlatform/open-knowledge-format@ad30107c31c06aec8a7d5636e0d1058118604e6f
+  (v0.2, sha256 26aa5da029278939f914e578107242d9607d4f2dc5fe153272b82f9ed1030101)
+  and backed by a claim in the particulars-knowledge workspace citing it with
+  quote and hash (subject: Open Knowledge Format).
+  Upkeep: when OKF publishes a new version, re-read the spec, update the
+  claims, then update the version stamp, the commit links and the
+  last-checked date below. CSS is copied from ../index.html (design D6).
+-->
+<style>
+  :root {
+    --bg: #faf9f7;
+    --fg: #1f2430;
+    --muted: #5b6270;
+    --line: #d8d5cf;
+    --card: #ffffff;
+    --accent: #0e8a6d;
+    --accent-soft: #e2f3ee;
+    --challenge: #b45309;
+    --challenge-soft: #fbeedd;
+    --stale: #b3341f;
+    --code-bg: #171c26;
+    --code-fg: #e6e9ef;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #12151c;
+      --fg: #e8e6e1;
+      --muted: #a0a7b3;
+      --line: #2c313d;
+      --card: #1a1e27;
+      --accent: #3ecfa4;
+      --accent-soft: #1c2f2a;
+      --challenge: #f0a04b;
+      --challenge-soft: #2f2619;
+      --stale: #e0604a;
+      --code-bg: #0c0e13;
+      --code-fg: #dfe3ea;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--fg);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    line-height: 1.6;
+    -webkit-text-size-adjust: 100%;
+  }
+  main, header, footer { display: block; }
+  .wrap { max-width: 920px; margin: 0 auto; padding: 0 1.25rem; }
+  section { padding: 3rem 0; }
+  section + section { border-top: 1px solid var(--line); }
+
+  h1, h2 { line-height: 1.15; letter-spacing: -0.015em; }
+  h1 { font-size: clamp(2rem, 5.5vw, 3rem); margin: 0.5rem 0 1rem; }
+  h2 { font-size: clamp(1.4rem, 3.6vw, 1.9rem); margin: 0 0 0.75rem; }
+  h3 { font-size: 1.05rem; margin: 1.75rem 0 0.4rem; }
+  p { max-width: 44rem; }
+  p.lead { font-size: 1.125rem; color: var(--muted); }
+  a { color: var(--accent); }
+  code, pre { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+  p code, li code { font-size: 0.9em; overflow-wrap: anywhere; }
+
+  .topbar { padding: 1.1rem 0 0; font-size: 0.925rem; }
+  .topbar a { text-decoration: none; font-weight: 600; }
+  .eyebrow {
+    font-size: 0.8rem; font-weight: 600; letter-spacing: 0.14em;
+    text-transform: uppercase; color: var(--accent); margin: 0;
+  }
+  .intro { padding-top: 2.5rem; }
+  .stamp {
+    display: inline-block; margin: 0.25rem 0 0; padding: 0.45rem 0.9rem;
+    border: 1px solid var(--line); border-radius: 999px; background: var(--card);
+    font-size: 0.875rem; color: var(--muted);
+  }
+
+  figure { margin: 2rem 0 0; }
+  .diagram-wrap { overflow-x: auto; }
+  .diagram-wrap svg { display: block; margin: 0 auto; max-width: 100%; height: auto; }
+  svg.min680 { min-width: 680px; }
+  figcaption { font-size: 0.9rem; color: var(--muted); text-align: center; margin-top: 0.75rem; }
+
+  svg text { fill: var(--fg); font-family: inherit; font-size: 15px; }
+  svg .small { font-size: 12.5px; }
+  svg .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 11.5px; }
+  svg .lbl { fill: var(--muted); font-size: 13px; }
+  svg .accent-t { fill: var(--accent); font-weight: 600; }
+  svg .challenge-t { fill: var(--challenge); font-weight: 600; }
+  svg .box { fill: var(--card); stroke: var(--line); stroke-width: 1.5; }
+  svg .box-accent { fill: var(--accent-soft); stroke: var(--accent); stroke-width: 2.5; }
+  svg .box-challenge { fill: var(--challenge-soft); stroke: var(--challenge); stroke-width: 1.5; }
+  svg .edge { stroke: var(--muted); stroke-width: 1.5; fill: none; }
+  svg .edge-dash { stroke-dasharray: 5 5; }
+  svg .head { fill: var(--muted); }
+  svg .divider { stroke: var(--line); stroke-dasharray: 3 6; stroke-width: 1.5; }
+
+  .kicker {
+    font-size: clamp(1.1rem, 2.8vw, 1.4rem); font-weight: 650; text-align: center;
+    max-width: 38rem; margin: 2.25rem auto 0; line-height: 1.5;
+  }
+  .kicker span { color: var(--accent); }
+
+  .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    gap: 1rem; margin-top: 1.75rem; }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 12px;
+    padding: 1.1rem 1.2rem; }
+  .card h3 { margin: 0 0 0.4rem; font-size: 1rem; }
+  .card p, .card li { font-size: 0.925rem; color: var(--muted); }
+  .card p { margin: 0 0 0.5rem; }
+  .card ul { margin: 0; padding-left: 1.1rem; }
+
+  pre.term {
+    background: var(--code-bg); color: var(--code-fg); border-radius: 12px;
+    padding: 1.2rem 1.35rem; overflow-x: auto; font-size: 0.85rem; line-height: 1.65;
+    margin: 1.5rem 0;
+  }
+  pre.term .c { color: #8b93a3; }
+  pre.term .k { color: #7fd6bb; }
+
+  footer { border-top: 1px solid var(--line); padding: 2rem 0 3rem;
+    font-size: 0.875rem; color: var(--muted); }
+  footer a { color: inherit; }
+  footer p { max-width: none; }
+</style>
+</head>
+<body>
+<header class="topbar">
+  <div class="wrap"><a href="/">&larr; Particulars</a></div>
+</header>
+<main>
+
+  <!-- INTRO -->
+  <section class="intro">
+    <div class="wrap">
+      <p class="eyebrow">Comparison</p>
+      <h1>Particulars and OKF</h1>
+      <p class="lead">Google Cloud&rsquo;s
+        <a href="https://github.com/GoogleCloudPlatform/open-knowledge-format">Open Knowledge Format</a>
+        (OKF) and particulars, the Dialectical Knowledge Format, solve neighbouring
+        problems in a similar way. Where they differ is what happens when a belief
+        changes &mdash; and that is also where they fit together.</p>
+      <p class="stamp">Describes
+        <a href="https://github.com/GoogleCloudPlatform/open-knowledge-format/blob/ad30107c31c06aec8a7d5636e0d1058118604e6f/SPEC.md">OKF v0.2</a>
+        &middot; last checked 2026-11-02</p>
+
+      <h2 style="margin-top:2.5rem">What both share</h2>
+      <p>Both are open, vendor-neutral formats made of plain text files that live in
+        git, are readable without special tooling, and are written by people and AI
+        agents alike. Both record where knowledge came from and how far to trust it.
+        If you value knowledge you can <code>cat</code>, diff, review in a pull request
+        and carry between tools, either format gives you that.</p>
+    </div>
+  </section>
+
+  <!-- DIFFERENCE: UPDATE MODEL -->
+  <section id="update-model">
+    <div class="wrap">
+      <h2>Where they differ: how a belief changes</h2>
+      <p class="lead">In March, Priya owns the billing service. In June, Ada takes
+        over. Here is the same change in each format.</p>
+
+      <figure>
+        <div class="diagram-wrap">
+        <svg class="min680" viewBox="0 0 800 470" role="img" aria-labelledby="um-title um-desc">
+          <title id="um-title">One change, two update models</title>
+          <desc id="um-desc">In OKF, the March concept file says Priya owns billing and
+            carries a stale_after date. In June an agent rewrites the same file to say
+            Ada owns billing and updates generated.at; a log.md line records the edit in
+            prose, and the earlier version survives in git history. In particulars, the
+            March claim stays as written; a June claim that Ada took over challenges it,
+            and a synthesis reconciles the two, citing both claims, keeping the reasoning
+            and declaring what remains open.</desc>
+          <defs>
+            <marker id="ah1" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+              <path d="M0,0 L10,5 L0,10 z" class="head"/>
+            </marker>
+          </defs>
+          <text x="200" y="30" text-anchor="middle" class="lbl" font-weight="600">OKF &middot; a document, rewritten</text>
+          <text x="600" y="30" text-anchor="middle" class="lbl" font-weight="600">particulars &middot; claims, reconciled</text>
+          <line x1="400" y1="18" x2="400" y2="452" class="divider"/>
+
+          <!-- OKF -->
+          <rect x="70" y="50" width="260" height="96" rx="10" class="box"/>
+          <text x="88" y="72" class="mono lbl">ownership/billing.md</text>
+          <text x="88" y="94" class="small">&ldquo;Priya owns billing.&rdquo;</text>
+          <text x="88" y="114" class="mono">stale_after: 2026-09-30&hellip;</text>
+          <text x="88" y="134" class="lbl">March</text>
+
+          <path d="M200,146 L200,190" class="edge" marker-end="url(#ah1)"/>
+          <text x="214" y="174" class="lbl">rewritten in place</text>
+
+          <rect x="70" y="194" width="260" height="96" rx="10" class="box"/>
+          <text x="88" y="216" class="mono lbl">ownership/billing.md</text>
+          <text x="88" y="238" class="small">&ldquo;Ada owns billing.&rdquo;</text>
+          <text x="88" y="258" class="mono">generated.at: 2026-06-12&hellip;</text>
+          <text x="88" y="278" class="lbl">June &middot; the same file</text>
+
+          <rect x="70" y="316" width="260" height="58" rx="10" class="box"/>
+          <text x="88" y="340" class="mono lbl">log.md &middot; Update: &hellip;</text>
+          <text x="88" y="361" class="lbl">earlier text: in git history</text>
+
+          <text x="200" y="406" text-anchor="middle" class="lbl">current and correct &mdash; the why</text>
+          <text x="200" y="426" text-anchor="middle" class="lbl">lives outside the knowledge</text>
+
+          <!-- particulars -->
+          <rect x="480" y="50" width="240" height="56" rx="10" class="box"/>
+          <text x="498" y="74" class="small">&ldquo;Priya owns billing.&rdquo;</text>
+          <text x="498" y="94" class="lbl">claim &middot; March &middot; thesis</text>
+
+          <path d="M600,106 L600,142" class="edge" marker-end="url(#ah1)"/>
+          <text x="614" y="130" class="lbl">challenged</text>
+
+          <rect x="480" y="146" width="240" height="56" rx="10" class="box-challenge"/>
+          <text x="498" y="170" class="small">&ldquo;Ada took over billing.&rdquo;</text>
+          <text x="498" y="190" class="challenge-t small">claim &middot; June &middot; antithesis</text>
+
+          <path d="M600,202 L600,238" class="edge" marker-end="url(#ah1)"/>
+          <text x="614" y="226" class="lbl">reconciled</text>
+
+          <rect x="462" y="242" width="276" height="96" rx="10" class="box-accent"/>
+          <text x="480" y="266" class="small">&ldquo;Ada owns billing since June 12.&rdquo;</text>
+          <text x="480" y="286" class="small">cites both claims &middot; keeps the reasoning</text>
+          <text x="480" y="306" class="small">unresolved: who covered the handover</text>
+          <text x="480" y="326" class="accent-t small">synthesis &middot; CURRENT</text>
+
+          <text x="600" y="406" text-anchor="middle" class="lbl">current and correct &mdash; the why</text>
+          <text x="600" y="426" text-anchor="middle" class="lbl">is part of the knowledge</text>
+        </svg>
+        </div>
+        <figcaption>Both end up saying Ada. They differ in where the reason for the change lives.</figcaption>
+      </figure>
+
+      <h3>OKF: freshness declared in advance, documents rewritten in place</h3>
+      <p>An OKF concept is one markdown file. Its producer can set
+        <code>status</code> (<code>draft</code>, <code>stable</code> or
+        <code>deprecated</code>) and <code>stale_after</code>, an absolute instant after
+        which the concept counts as stale. The spec expects agents to keep concepts
+        current by rewriting them &mdash; it notes that &ldquo;agents constantly rewrite
+        these documents&rdquo; &mdash; with <code>generated.at</code> marking the last
+        meaningful change and an optional <code>log.md</code> recording edits in
+        prose. That is simple, fast to read and easy to serve.</p>
+      <p>What the format does not have is a place for a disagreement. If two sources
+        say different things, or the reasoning for a change matters later, that lives in
+        commit messages and log prose rather than in the knowledge an agent reads.
+        And <code>stale_after</code> is a prediction: a fact can go wrong before its date
+        or stay right long after it.</p>
+
+      <h3>Particulars: staleness detected by contradiction, reconciled with reasons</h3>
+      <p>A particulars claim is never edited. When something contradicts it, the new
+        claim is recorded next to it, and a synthesis reconciles the two: it cites both,
+        carries the reasoning, and says what is still unresolved. The synthesis becomes
+        the current belief, and can itself be challenged. A belief goes stale when
+        evidence against it arrives, not when a date passes &mdash; and an agent reading
+        it inherits the argument, not just the answer.</p>
+      <p>The cost is more structure: claims, syntheses and roles to learn, and a record
+        that grows by appending, so you rely on tooling to show you the current state.</p>
+
+      <p class="kicker">A date tells you <span>when to doubt</span>.
+        A contradiction tells you <span>what changed</span>.</p>
+    </div>
+  </section>
+
+  <!-- PROVENANCE, FAIRLY -->
+  <section id="provenance">
+    <div class="wrap">
+      <h2>Provenance, compared fairly</h2>
+      <p>Both formats take provenance seriously, at different grains.</p>
+      <div class="cards">
+        <div class="card">
+          <h3>OKF</h3>
+          <p>A concept lists its <code>sources</code>, each with objective credibility
+            signals (<code>author</code>, <code>usage_count</code>,
+            <code>last_modified</code>). A sentence in the body can be attributed to a
+            source with a footnote keyed to that source&rsquo;s id.
+            <code>generated</code> and <code>verified</code> record who wrote and who
+            confirmed the concept, and consumers derive a trust tier from them:
+            unverified, machine-confirmed or human-reviewed.</p>
+        </div>
+        <div class="card">
+          <h3>Particulars</h3>
+          <p>The unit is a single claim, and it is immutable. Each records who asserted
+            it, through which harness and model, from which document &mdash; with the
+            supporting quote and a hash of what was read &mdash; and whether it was
+            observed, inferred from other claims, or simply held as a position. A
+            wrong claim is retracted with a reason, never rewritten.</p>
+        </div>
+      </div>
+      <p style="margin-top:1.5rem">The difference is not attribution versus none. It is
+        the unit of change: a document that is rewritten, or a claim that is
+        superseded.</p>
+    </div>
+  </section>
+
+  <!-- COMPOSITION -->
+  <section id="together">
+    <div class="wrap">
+      <h2>Using them together</h2>
+      <p class="lead">An OKF bundle makes a good source for particulars claims. Because
+        a claim keeps a verbatim quote and a hash of what it read, it stays honest even
+        when the document it cites is rewritten.</p>
+
+      <pre class="term" aria-label="Example particulars claim citing an OKF concept"><span class="c"># claims/clm_….yaml — illustrative</span>
+<span class="k">subject:</span> par_…               <span class="c"># the billing service</span>
+<span class="k">content:</span> Ada owns the billing service.
+<span class="k">evidential:</span> observed
+<span class="k">source:</span>
+  <span class="k">author:</span> https://github.com/ada
+  <span class="k">harness:</span> claude
+  <span class="k">document:</span>
+    <span class="k">ref:</span> https://github.com/acme/knowledge/blob/4c1e…/ownership/billing.md
+    <span class="k">hash:</span> sha256:9f2b…    <span class="c"># the OKF concept as it was read</span>
+    <span class="k">quote:</span> Ada owns billing.</pre>
+
+      <p>Each format then supplies a signal the other lacks:</p>
+      <div class="cards">
+        <div class="card">
+          <h3>OKF tells particulars when to look</h3>
+          <p>When the cited concept passes its <code>stale_after</code>, or moves to
+            <code>deprecated</code>, the claims that cite it are due a re-check.</p>
+        </div>
+        <div class="card">
+          <h3>Particulars tells OKF what moved</h3>
+          <p>Re-reading the concept compares the quote and the hash. The quote gone
+            means the cited text changed; the quote present but the hash different means
+            the text around it did. Either way the claim stays readable &mdash; drift is a
+            prompt to re-read, not an error.</p>
+        </div>
+      </div>
+      <p style="margin-top:1.5rem">When the re-read turns up something new, it becomes a
+        new claim, and the disagreement &mdash; if there is one &mdash; becomes a
+        synthesis. The OKF bundle stays the readable current view; particulars keeps the
+        account of how it got there.</p>
+    </div>
+  </section>
+
+  <!-- SCOPE -->
+  <section id="scope">
+    <div class="wrap">
+      <h2>What each one covers</h2>
+      <p><strong>OKF</strong> covers &ldquo;the metadata, context, and curated insight
+        that surrounds data and systems&rdquo;. It deliberately fixes no taxonomy of
+        concept types: a bundle can hold tables, datasets, metrics, attested computations
+        &mdash; sanctioned ways to compute a number, with a check that it was computed
+        that way &mdash; and procedures such as incident playbooks. Here OKF is broader
+        than particulars.</p>
+      <p><strong>Particulars</strong> is semantic memory with provenance: what is
+        believed about things in the world, and why. It leaves procedural memory (how to
+        do things) and episodic memory (a log of what happened) out of scope on
+        purpose; an event can be the subject of claims, but a log of events is not the
+        format&rsquo;s job.</p>
+      <p>Neither standardises episodic memory: OKF&rsquo;s <code>log.md</code> records
+        edits to a bundle, not events in the world. If you need a runbook, OKF has room
+        for it. If you need to know why the runbook&rsquo;s owner changed and whether
+        everyone agrees, that is a job for particulars.</p>
+    </div>
+  </section>
+
+</main>
+<footer>
+  <div class="wrap">
+    <p>OKF facts on this page are taken from the
+      <a href="https://github.com/GoogleCloudPlatform/open-knowledge-format/blob/ad30107c31c06aec8a7d5636e0d1058118604e6f/SPEC.md">OKF v0.2 specification</a>
+      (published 2026-07-24; v0.1 2026-06-12) and were last checked on 2026-11-02.
+      Spotted something out of date or unfair?
+      <a href="https://github.com/nodelogicau/particulars/issues">Open an issue</a>.</p>
+    <p><a href="/">Particulars</a> is an open format from
+      <a href="https://github.com/nodelogicau">Node Logic</a>. The specification is
+      released under CC0; the CLI is MIT-licensed. &copy; 2026 Node Logic.</p>
+  </div>
+</footer>
+</body>
+</html>
