@@ -23,8 +23,8 @@
 
 - [x] 4.1 Check the comparison page with network inspection (only the document request), with JavaScript disabled, at a 360px viewport, and in dark mode
 - [x] 4.2 Run an accessibility pass: heading order, diagram captions or labels, AA contrast in both themes
-- [ ] 4.3 After merge, confirm `https://particulars.fyi/okf/` is served over HTTPS
+- [x] 4.3 After merge, confirm `https://particulars.fyi/okf/` is served over HTTPS
 
 ## 5. Record the outcome
 
-- [ ] 5.1 Assert a claim in `particulars-knowledge` that the comparison page exists and names OKF only on `/okf/`, then write a synthesis that resolves the positioning synthesis's "comparison or FAQ page" unresolved item
+- [x] 5.1 Assert a claim in `particulars-knowledge` that the comparison page exists and names OKF only on `/okf/`, then write a synthesis that resolves the positioning synthesis's "comparison or FAQ page" unresolved item
