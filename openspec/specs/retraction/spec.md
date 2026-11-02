@@ -3,11 +3,9 @@
 ## Purpose
 
 Defines how a claim, synthesis, or merge record is retracted: an append-only `retracted` block on the object's own file, the optional `superseded-by` pointer, and the consequences for the index and for signatures.
-
 ## Requirements
-
 ### Requirement: Retraction is an append-only block on the object file
-A retraction SHALL be represented by adding a `retracted` block to the retracted object's own YAML file, with fields `timestamp` (required), `reason` (required), `source` (required, see `source-provenance`), `kind` (optional, see below), and `superseded-by` (optional). Adding this block SHALL be the only permitted modification to an existing object file. The block SHALL never be removed; reinstatement SHALL be expressed as a new claim or synthesis that cites the retracted object.
+A retraction SHALL be represented by adding a `retracted` block to the retracted object's own YAML file, with fields `timestamp` (required), `reason` (required), `source` (required, see `source-provenance`), `kind` (optional, see below), and `superseded-by` (optional). Adding this block SHALL be one of exactly two permitted modifications to an existing object file; the other is redaction, as defined in `redaction`. The block SHALL never be removed; reinstatement SHALL be expressed as a new claim or synthesis that cites the retracted object. A redaction MAY remove the block's `reason`, and only its `reason`: the block itself, with its `timestamp`, `source`, `kind` and `superseded-by`, SHALL remain, and its `reason` SHALL then be valid when absent.
 
 #### Scenario: Retracting a claim
 - **WHEN** `claim_retract(clm_X, reason, source)` is called
@@ -16,6 +14,10 @@ A retraction SHALL be represented by adding a `retracted` block to the retracted
 #### Scenario: Attempting to un-retract
 - **WHEN** an implementation is asked to reverse a retraction
 - **THEN** it refuses to remove the `retracted` block and instead requires a new claim or synthesis citing the retracted object
+
+#### Scenario: A redacted retraction reason
+- **WHEN** a retracted claim's `retracted.reason` is redacted
+- **THEN** the `retracted` block remains without `reason`, the object is still retracted, and its `kind` still counts as declared
 
 ### Requirement: Syntheses and merge records are retractable
 The `retracted` block SHALL be valid on claims, syntheses, and merge records alike.
@@ -46,6 +48,7 @@ When an object is retracted, the index SHALL record it: in a `dkf/0.1` index, it
 #### Scenario: A retraction on a branch merged across one boundary
 - **WHEN** a claim is retracted on a branch on 28 November 2026 and the branch merges on 5 December after main has minted in December
 - **THEN** November is open, the id is in the root's `retracted`, and no segment changes
+
 ### Requirement: `superseded-by` points at an existing claim or synthesis
 A `retracted.superseded-by` value, when present, SHALL be the id of an existing claim or synthesis. Validators SHALL reject a dangling target. The pointer is informational for readers and `lineage_trace`; it SHALL NOT make the target an input of anything and SHALL NOT count as synthesis for conflict detection.
 
@@ -114,3 +117,4 @@ The specification SHALL state that `kind` is the observation from which the reli
 #### Scenario: A discredited document
 - **WHEN** a claim is retracted with `kind: provenance-failure`
 - **THEN** other non-retracted claims citing the same document are identifiable as candidates for review
+

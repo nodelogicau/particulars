@@ -3,9 +3,7 @@
 ## Purpose
 
 Defines `knowledge_recall` called with a free-text `query`: resolution to particulars followed by structural recall, the required model-free lexical baseline, the `resolution` marker on results, the optional semantic cache and its rules (derived, model-tagged, outside the workspace, never committed or published, never authoritative), the scope ceiling on remote embedding, and that `particular_resolve` stays exact.
-
 ## Requirements
-
 ### Requirement: Recall by query resolves to particulars, then recalls structurally
 `knowledge_recall` called with `query` SHALL first resolve the query to a set of particulars, each taken with its merge equivalence class, and SHALL then return, for each, exactly what `knowledge_recall` called with that particular's id and the same `author`, `scope`, and `include_retracted` would return. Every object in the response SHALL come from this second stage. Within a particular the order SHALL be lineage order with `current` identified, as for recall by particular; resolution SHALL NOT reorder it. Objects whose `content` matches the query, as the baseline defines a match — the trimmed whole query or any one trimmed term occurring in it — SHALL be marked as matched within their particular's results.
 
@@ -136,7 +134,7 @@ Every implementation SHALL resolve a query, without a model, by matching it unde
 - **THEN** that particular is not resolved, because the query is empty after removal
 
 ### Requirement: A semantic cache is optional, derived, and never authoritative
-An implementation MAY keep a cache of embeddings of particular labels and aliases and of claim and synthesis `content`, and MAY use it to propose particulars in the resolution stage. The cache SHALL be fully regenerable from the workspace files. It SHALL record the identifier of the model that produced it and SHALL NOT be consulted when that differs from the model in use. It SHALL be stored outside the workspace directory tree, SHALL NOT be committed, and SHALL NOT be published or served to consumers. Validators and drift checks SHALL NOT read it. A missing, partial, or stale cache SHALL NOT cause an object to be returned that recall by particular would not return; it MAY cause a particular to be unresolved that a complete cache would have proposed.
+An implementation MAY keep a cache of embeddings of particular labels and aliases and of claim and synthesis `content`, and MAY use it to propose particulars in the resolution stage. The cache SHALL be fully regenerable from the workspace files. It SHALL record the identifier of the model that produced it and SHALL NOT be consulted when that differs from the model in use. It SHALL be stored outside the workspace directory tree, SHALL NOT be committed, and SHALL NOT be published or served to consumers. Validators and drift checks SHALL NOT read it. A missing, partial, or stale cache SHALL NOT cause an object to be returned that recall by particular would not return; it MAY cause a particular to be unresolved that a complete cache would have proposed. Because an embedding can disclose the text it was computed from, an implementation SHALL NOT consult an embedding of a field that has since been redacted, and SHALL delete it no later than the next update of the cache; content-redacted objects are identified for this from the index's `redacted` lists.
 
 #### Scenario: Missing cache
 - **WHEN** the cache has been deleted and `knowledge_recall(query)` is called
@@ -149,6 +147,10 @@ An implementation MAY keep a cache of embeddings of particular labels and aliase
 #### Scenario: Retraction after embedding
 - **WHEN** a claim was embedded and has since been retracted, and recall by query is called with `include_retracted: false`
 - **THEN** the claim is not in the response, and the cache did not have to be updated for this to hold
+
+#### Scenario: Redaction after embedding
+- **WHEN** a claim's `content` was embedded and has since been redacted, and the cache is next updated
+- **THEN** the claim's vector is deleted from the cache, and before that update it was never consulted
 
 #### Scenario: Not in the published tree
 - **WHEN** a publisher serves its workspace directory over HTTP
@@ -179,3 +181,4 @@ An implementation SHALL NOT send object content, labels, or aliases to an embedd
 #### Scenario: No exact match
 - **WHEN** `particular_resolve("auth timeout")` is called and no particular has that label or alias, though a semantic cache would rank one highly
 - **THEN** it returns null
+
