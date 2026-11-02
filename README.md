@@ -262,8 +262,9 @@ to fetch and no hash, is provenance a reviewer can weigh. A field called
 
 Readers accept `uri` as a legacy alias for `ref` and should warn. The warning
 matters for a reason particular to this format rather than out of tidiness: a
-file carrying `uri` can never be rewritten, since appending a retraction is
-the only permitted modification, so readers must go on accepting it and a
+file carrying `uri` can never be rewritten, since retraction and redaction
+are the only permitted modifications and neither renames a field, so readers
+must go on accepting it and a
 warning is the only way anyone learns it is there.
 
 **`author` names who produced what was read.** It is a particular reference
@@ -427,6 +428,12 @@ aliases:
   - ProjectX
   - project_x
 ```
+
+A particular is the one object updated in place: `particular_define`, being
+idempotent on URI, may rewrite its `label` and `aliases`. Its `id`, `type`
+and `uri` never change, and nothing else about it is ever modified — it is
+not retracted or redacted; two particulars found to be one thing are
+[merged](#merge-records).
 
 The `uri` field is what makes cross-source reasoning possible. Two independent
 publishers pointing at the same URI are making claims about the same thing,
@@ -770,8 +777,11 @@ retracted:
 Rules:
 
 - Adding a `retracted` block is one of **exactly two permitted
-  modifications** to an existing object file; the other is
-  [redaction](#redaction). `timestamp`, `reason`, and `source` are required.
+  modifications** to an existing claim, synthesis, merge record or
+  promotion record; the other is [redaction](#redaction), which applies to
+  claims and syntheses only. `timestamp`, `reason`, and `source` are
+  required. A particular is never retracted; `particular_define` updates its
+  `label` and `aliases` instead (see [`DPARTICULAR`](#dparticular)).
 - It is never removed. Reinstatement is a new claim or synthesis that cites
   the retracted object. A redaction may remove its `reason`, and only that:
   the block stands, the object stays retracted, and its `kind` still counts.
@@ -1260,6 +1270,16 @@ belongs. The month a retraction is dated into is the UTC month of its
 `timestamp`: `2026-09-01T00:30:00+02:00` is an August retraction, whatever
 the writer's wall clock said.
 
+Sealing stops a month gaining files, not its files changing. A file in a
+sealed month may change in exactly the ways any existing file may, and there
+are three: a claim, synthesis, merge or promotion record gains a `retracted`
+block; a claim or synthesis gains or extends a `redacted` block and loses the
+fields it lists (`dkf/0.3`); and a particular's `label` or `aliases` are
+updated by `particular_define`, never its `id`, `type` or `uri`. None of the
+three changes an index entry, a segment, or a segment's `count`, so none
+rewrites a sealed segment. Anything else, such as rewriting a claim's
+`content`, is forbidden in an open month and a sealed one alike.
+
 What the grace period does not cover is a branch open across *two* or more
 boundaries. Such a merge adds a file to a sealed month's directory, and the
 segment for that month would have to change. It is detected without
@@ -1280,8 +1300,8 @@ request this format's own workspace has had, and a wider one can become a
 `dkf.yaml` key when a workspace with quarter-long branches asks.
 
 The git consequence is a benefit delivered, not a rule: an old month's tree
-object is rewritten only by a late merge or by a retraction, and never by
-an ordinary append.
+object is rewritten only by a late merge, a retraction, a redaction, or an
+update to a particular's label or aliases, and never by an ordinary append.
 
 Nothing dates an id but a clock, and a far-future id is always a bad
 machine. Under the grace period it is also dangerous, because an id two
@@ -1888,16 +1908,26 @@ a model:
   committed, published, or served. Outside the tree, there is no
   `.gitignore` entry to forget and no static host that can serve it.
 - Validators and drift checks do not read it.
-- It is keyed by object id. Objects are immutable apart from retraction, so
-  a vector never needs recomputing under the same model, and the work after
-  a write or a pull is the ids in the index that the cache lacks.
+- It is keyed by object id. A claim's or synthesis's `content` never
+  changes except by redaction, so its vector never needs recomputing under
+  the same model, and the work after a write or a pull is the ids in the
+  index that the cache lacks.
+- Particulars are the exception, because `particular_define` may update a
+  label or aliases in place and the index does not mirror either. The cache
+  records, for each label or alias vector, the text it embedded or a hash of
+  it; a vector whose text is no longer the particular's label or one of its
+  aliases is never consulted, so a removed alias cannot resolve a query, and
+  it is recomputed or deleted no later than the cache's next update. An
+  update therefore rereads the particulars, not only the ids the index adds
+  — they are few, and a rebuild reads them anyway.
   Retracted objects may stay embedded: stage two removes them, so
   retraction never touches the cache.
 - Redaction does touch it, and is the one change that does. An embedding can
   disclose the text it was computed from, so a vector of a field since
   [redacted](#redaction) is never consulted and is deleted no later than the
   cache's next update. Content-redacted ids come from the index's `redacted`
-  lists. Only `content` is embedded, so evidence-only redactions need nothing.
+  lists. Of the redactable fields only `content` is embedded, so
+  evidence-only redactions need nothing.
 
 A missing, partial or stale cache MUST NOT cause an object to be returned
 that recall by particular would not return. It MAY cause a particular to go
@@ -2169,6 +2199,15 @@ and its fixed order favours common words
 ([#38](https://github.com/nodelogicau/particulars/issues/38)). That is tool
 behaviour, not the file format, and no file is read differently because
 of it. Redaction is not part of v0.2. It follows as `dkf/0.3`.
+
+**Erratum to v0.2.** As declared, v0.2 said a file in a sealed month may
+change only by gaining a `retracted` block, while `particular_define` already
+updated a particular's `label` and `aliases` in place, in any month. The text
+now lists that update as permitted, and the semantic cache now recomputes a
+particular's vectors when it happens. No format changed: no file is read
+differently, no index document is affected, and implementations that
+already updated particulars in sealed months were conformant all along
+([#51](https://github.com/nodelogicau/particulars/issues/51)).
 
 Since v0.2, [redaction](#redaction) introduces `dkf/0.3`, not yet declared,
 and is breaking in the one
