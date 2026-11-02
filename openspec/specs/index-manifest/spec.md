@@ -3,9 +3,7 @@
 ## Purpose
 
 Defines `index.yaml` as a derived, regenerable cache of the object files: its baseline and optional entry fields, how local and remote consumers must treat it, and the rebuild and drift-check operations implementations provide.
-
 ## Requirements
-
 ### Requirement: The index is a derived, regenerable cache
 The object and record YAML files SHALL be the source of truth. `index.yaml` SHALL be fully reconstructible from them and SHALL never be treated as authoritative by a local consumer. A local consumer SHALL NOT return incorrect results because the index is missing or stale; it MAY be slower.
 
@@ -59,6 +57,7 @@ Each entry SHALL carry `id` and `type`; particulars SHALL carry `uri`; claims an
 #### Scenario: No embeddings in the index
 - **WHEN** an implementation that keeps a semantic cache rebuilds the index
 - **THEN** no entry carries an embedding vector or a model identifier, and the rebuilt index is identical to one written by an implementation with no cache
+
 ### Requirement: The index remains committed for remote consumers
 Publishers SHALL commit `index.yaml` so that HTTP consumers, who cannot list directories, can enumerate a workspace. Remote consumers SHALL treat it as potentially lagging the object files.
 
@@ -108,8 +107,9 @@ Implementations SHALL provide an operation that regenerates the index from the f
 #### Scenario: The drift check does not see a sealed-month retraction
 - **WHEN** a file under `claims/2026-08/` gains a `retracted` block dated in August 2026, August is sealed, and its file count is unchanged
 - **THEN** the drift check compares `index/2026-08.yaml` by count and reports nothing, and the specification says validation is where this is caught
+
 ### Requirement: The index is a hot tail, sealed segments, and a tombstone list
-In a `dkf/0.2` workspace, `index.yaml` SHALL carry `format`, `segments` (a list of mappings, each with `path` relative to `index.yaml` and `count`, the number of entries in that segment: `index/legacy.yaml` first if it exists, then one per sealed month in ascending order), `entries` (the entries of objects minted in either open month), and `retracted` (the ids, sorted, of objects whose `retracted.timestamp` falls in either open month or any later month, whatever month they were minted in). The current month SHALL be the month of the newest id in the workspace; the open months SHALL be the current month and the month before it; a month SHALL be sealed once any id in the workspace was minted two or more months after it. Each sealed month's segment SHALL be at `index/<YYYY-MM>.yaml` and SHALL carry `format`, `entries` for objects minted in that month, and `retracted` for objects retracted in that month; its `count` in the root SHALL equal the number of its entries, which SHALL equal the number of files in that month's directories across every type. `index/legacy.yaml` SHALL carry `format` and `entries` for objects whose ids derive no month, and no `retracted`. A rebuild SHALL be a function of the files alone; a sealed month with retractions and no mints yields a segment with an empty `entries`, and a month with neither yields no segment. A sealed segment SHALL NOT change once written; `index/legacy.yaml` is not sealed and a change to it is drift. Entries SHALL NOT carry `retracted`; the per-month lists are the sole index record of retraction. Because an object cannot be retracted before it is minted, an object minted in month M is retracted if and only if its id appears in `retracted` of the root or of a segment for month M or later, a check whose cost is proportional to the months elapsed since M.
+In a `dkf/0.2` or later workspace, `index.yaml` SHALL carry `format`, `segments` (a list of mappings, each with `path` relative to `index.yaml` and `count`, the number of entries in that segment: `index/legacy.yaml` first if it exists, then one per sealed month in ascending order), `entries` (the entries of objects minted in either open month), and `retracted` (the ids, sorted, of objects whose `retracted.timestamp` falls in either open month or any later month, whatever month they were minted in), and, in a `dkf/0.3` workspace, `redacted` (the ids, sorted, of objects whose `redacted.fields` includes `content` and whose `redacted.timestamp` falls in either open month or any later month). The current month SHALL be the month of the newest id in the workspace; the open months SHALL be the current month and the month before it; a month SHALL be sealed once any id in the workspace was minted two or more months after it. Each sealed month's segment SHALL be at `index/<YYYY-MM>.yaml` and SHALL carry `format`, `entries` for objects minted in that month, `retracted` for objects retracted in that month, and, in `dkf/0.3`, `redacted` for objects content-redacted in that month; its `count` in the root SHALL equal the number of its entries, which SHALL equal the number of files in that month's directories across every type. `index/legacy.yaml` SHALL carry `format` and `entries` for objects whose ids derive no month, and no `retracted` or `redacted`. A rebuild SHALL be a function of the files alone; a sealed month with retractions or redactions and no mints yields a segment with an empty `entries`, and a month with none of these yields no segment. A sealed segment SHALL NOT change once written; `index/legacy.yaml` is not sealed and a change to it is drift. Entries SHALL NOT carry `retracted` or `redacted`; the per-month lists are the sole index record of retraction and of withdrawal by redaction, and no redaction changes an entry, because no redactable field is mirrored by one. Because an object cannot be retracted before it is minted, an object minted in month M is retracted if and only if its id appears in `retracted` of the root or of a segment for month M or later, a check whose cost is proportional to the months elapsed since M; the same holds for `redacted`, so an object minted in month M is withdrawn if and only if its id appears in `retracted` or `redacted` of the root or of a segment for month M or later.
 
 #### Scenario: Shape of the root index
 - **WHEN** a workspace holds objects minted in August, September and October 2026, the newest id is from October, and one August object was retracted in September
@@ -137,7 +137,7 @@ In a `dkf/0.2` workspace, `index.yaml` SHALL carry `format`, `segments` (a list 
 
 #### Scenario: A segment is a valid index document
 - **WHEN** a tool that understands index entries opens `index/2026-08.yaml` on its own
-- **THEN** it reads `format`, a list of entries, and a list of retracted ids in the shape defined by this specification, and nothing else
+- **THEN** it reads `format`, a list of entries, a list of retracted ids, and, in `dkf/0.3`, a list of redacted ids, in the shape defined by this specification, and nothing else
 
 #### Scenario: A remote consumer caches sealed segments
 - **WHEN** a consumer has fetched `index/2026-08.yaml` once and the workspace validates
@@ -159,6 +159,14 @@ In a `dkf/0.2` workspace, `index.yaml` SHALL carry `format`, `segments` (a list 
 - **WHEN** the newest id is from October 2026 and a retraction is dated in December 2026 by a writer whose clock is ahead
 - **THEN** the root's `retracted` carries it, and it seals into `index/2026-12.yaml` only when an id is minted in February 2027 or later
 
+#### Scenario: A redaction touches only the root
+- **WHEN** a claim whose entry is in `index/2026-08.yaml` has its `content` redacted in October 2026 in a `dkf/0.3` workspace
+- **THEN** its id is added to `redacted` in `index.yaml`, its entry and `index/2026-08.yaml` are byte-identical to before, and the id seals into `index/2026-10.yaml`'s `redacted` with October
+
+#### Scenario: Filtering withdrawn objects from the index
+- **WHEN** `knowledge_recall` is called with `include_retracted: false` over objects minted in August 2026 in a `dkf/0.3` workspace
+- **THEN** retracted and content-redacted objects are both excluded using the `retracted` and `redacted` lists of the root and of the segments for August and later, without opening files
+
 ### Requirement: Validation compares sealed segments against the files
 Because validation reads every object file, in a `dkf/0.2` workspace it SHALL regenerate each sealed month's `retracted` list from the files and compare it with the committed segment's list, and SHALL report an id present in one and absent from the other, naming the object and the segment. A retraction whose `timestamp` falls in a sealed month — whether written in violation of the guard or merged from a branch open across two or more boundaries — is a validation failure. Validation SHALL also perform the drift check's count comparison. The specification SHALL state that "a workspace that validates" therefore means one in which no sealed segment has gained a mint or a retraction since it was written, which is the condition under which a remote consumer may cache a sealed segment indefinitely.
 
@@ -177,3 +185,4 @@ Because validation reads every object file, in a `dkf/0.2` workspace it SHALL re
 #### Scenario: What "validates" promises a consumer
 - **WHEN** a remote consumer asks whether it may cache `index/2026-08.yaml` indefinitely
 - **THEN** the answer is yes for a workspace that validates, because validation has checked both that no file arrived in August and that no retraction was dated into it
+

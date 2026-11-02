@@ -3,9 +3,7 @@
 ## Purpose
 
 Defines the canonical field order for each object and record type, the asymmetry between writers and readers, where implementation-specific fields belong, the relationship between canonical order and the payload covered by the reserved `signature` field, and the grammar of every timestamp field.
-
 ## Requirements
-
 ### Requirement: Each object type has a canonical field order
 The field order shown for each object and record type in the specification SHALL be its canonical order. Writers SHOULD emit fields in that order. Readers MUST accept the fields in any order and MUST NOT reject a file because its fields are ordered differently.
 
@@ -25,7 +23,9 @@ Fields an implementation adds beyond those the specification defines SHALL be wr
 - **THEN** the field is written after `confidence` and consumers that do not understand it ignore it
 
 ### Requirement: The signed payload is defined over the canonical form
-The payload covered by the reserved `signature` field SHALL be the object parsed to its data model — mappings with string keys; values that are strings, numbers, booleans, arrays, or mappings — with the `retracted` and `signature` fields removed, canonicalised per RFC 8785 (JSON Canonicalization Scheme). Every field this specification defines as textual, including timestamps, ids, and references, SHALL be a string in the data model regardless of how a YAML parser would type it; `confidence` SHALL be a number. The payload SHALL be built from the parsed, typed data model, not from a generic YAML-to-JSON conversion, which types these fields differently — a YAML 1.2 parser returns an unquoted timestamp as a native time value, and only the typed model formats it back to the string this specification requires. YAML aliases are resolved before the data model exists and therefore never affect the payload; their prohibition in object files is a file-format safety rule (see below), not a signing rule. Non-string keys SHALL NOT appear in objects. File-level layout — field order, quoting, indentation — SHALL NOT affect the payload.
+The payload covered by the reserved `signature` field SHALL be the object parsed to its data model — mappings with string keys; values that are strings, numbers, booleans, arrays, or mappings — with the `retracted`, `redacted` and `signature` fields removed, canonicalised per RFC 8785 (JSON Canonicalization Scheme). Every field this specification defines as textual, including timestamps, ids, and references, SHALL be a string in the data model regardless of how a YAML parser would type it; `confidence` SHALL be a number. The payload SHALL be built from the parsed, typed data model, not from a generic YAML-to-JSON conversion, which types these fields differently — a YAML 1.2 parser returns an unquoted timestamp as a native time value, and only the typed model formats it back to the string this specification requires. YAML aliases are resolved before the data model exists and therefore never affect the payload; their prohibition in object files is a file-format safety rule (see below), not a signing rule. Non-string keys SHALL NOT appear in objects. File-level layout — field order, quoting, indentation — SHALL NOT affect the payload.
+
+A signature over an object from which a covered field has since been redacted cannot verify. Implementations SHALL report this as `signature_redacted`, a fact about the corpus reported in aggregate, and SHALL NOT report the signature as invalid, because the `redacted` block already records what changed.
 
 Object files SHALL NOT use YAML anchors and aliases: alias expansion is a resource-exhaustion vector, and validators SHOULD reject files containing them.
 
@@ -36,6 +36,10 @@ Object files SHALL NOT use YAML anchors and aliases: alias expansion is a resour
 #### Scenario: Retraction does not invalidate
 - **WHEN** a `retracted` block is appended to a signed claim
 - **THEN** the payload is computed with `retracted` removed and the original signature still verifies
+
+#### Scenario: Redaction makes a signature unverifiable
+- **WHEN** `content` is redacted from a signed claim
+- **THEN** the signature does not verify, and the condition is reported as `signature_redacted`, not as an invalid signature
 
 #### Scenario: Two writers, one payload
 - **WHEN** two implementations serialise the same claim with `confidence: 0.9` and `confidence: 0.90`
@@ -71,3 +75,4 @@ Every field this specification defines as a timestamp — an object's `timestamp
 #### Scenario: A fractional second survives the payload
 - **WHEN** a file written by another tool carries `timestamp: 2026-08-20T09:02:00.500Z`
 - **THEN** the payload carries `2026-08-20T09:02:00.5Z`, and the same file written `2026-08-20T09:02:00Z` would not produce the same payload
+
