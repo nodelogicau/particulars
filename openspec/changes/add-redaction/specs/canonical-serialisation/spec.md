@@ -1,0 +1,28 @@
+## MODIFIED Requirements
+
+### Requirement: The signed payload is defined over the canonical form
+The payload covered by the reserved `signature` field SHALL be the object parsed to its data model — mappings with string keys; values that are strings, numbers, booleans, arrays, or mappings — with the `retracted`, `redacted` and `signature` fields removed, canonicalised per RFC 8785 (JSON Canonicalization Scheme). Every field this specification defines as textual, including timestamps, ids, and references, SHALL be a string in the data model regardless of how a YAML parser would type it; `confidence` SHALL be a number. The payload SHALL be built from the parsed, typed data model, not from a generic YAML-to-JSON conversion, which types these fields differently — a YAML 1.2 parser returns an unquoted timestamp as a native time value, and only the typed model formats it back to the string this specification requires. YAML aliases are resolved before the data model exists and therefore never affect the payload; their prohibition in object files is a file-format safety rule (see below), not a signing rule. Non-string keys SHALL NOT appear in objects. File-level layout — field order, quoting, indentation — SHALL NOT affect the payload.
+
+A signature over an object from which a covered field has since been redacted cannot verify. Implementations SHALL report this as `signature_redacted`, a fact about the corpus reported in aggregate, and SHALL NOT report the signature as invalid, because the `redacted` block already records what changed.
+
+Object files SHALL NOT use YAML anchors and aliases: alias expansion is a resource-exhaustion vector, and validators SHOULD reject files containing them.
+
+#### Scenario: Reformatting does not invalidate
+- **WHEN** a signed claim's file is rewritten in a different field order and quoting style with identical content
+- **THEN** the payload, and therefore the signature, is unchanged
+
+#### Scenario: Retraction does not invalidate
+- **WHEN** a `retracted` block is appended to a signed claim
+- **THEN** the payload is computed with `retracted` removed and the original signature still verifies
+
+#### Scenario: Redaction makes a signature unverifiable
+- **WHEN** `content` is redacted from a signed claim
+- **THEN** the signature does not verify, and the condition is reported as `signature_redacted`, not as an invalid signature
+
+#### Scenario: Two writers, one payload
+- **WHEN** two implementations serialise the same claim with `confidence: 0.9` and `confidence: 0.90`
+- **THEN** both parse to the same number and produce byte-identical payloads
+
+#### Scenario: Signature suites remain reserved
+- **WHEN** an implementation asks what algorithm signs the payload
+- **THEN** the specification defines only the payload in v0.1; suites are reserved

@@ -73,7 +73,8 @@ was formed — making it portable, inspectable, and trustworthy across systems.
 
 The format defines three knowledge object types — particular, claim, and
 synthesis — and records that describe events about them: retraction, merge,
-and publish. Everything else is implementation.
+and publish. Redaction is a block of the same kind as retraction, recorded
+on the object's own file. Everything else is implementation.
 
 ### Identifiers
 
@@ -380,6 +381,21 @@ and such provenance is reported as *unverified* rather than absent or
 invalid. A validator running offline reports references as not checked and
 does not fail.
 
+**A redacted signal is not a moved one.** When a [redaction](#redaction)
+removes `quote`, `ref`, or `hash`, verification proceeds with what remains:
+a claim whose quote is redacted and whose `ref` and `hash` remain is checked
+by the hash alone, as a reference that never carried a quote is — not as
+the table's *absent* rows, which mean a quote that no longer appears; a claim whose
+`ref` is redacted cannot be fetched, and is unverifiable. Neither is ever
+reported as drift — nothing happened to the source. For the same reason as
+a drifted one, a `defect` declared against an object whose quote or `ref` is
+redacted is **unverifiable**: the text the claim is said to have misread is
+no longer one a reviewer can read.
+
+A redaction is also the remedy when a quote turns out to disclose too much:
+redacting `source.document.quote` keeps the claim live and the source
+identified, and removes the verbatim text.
+
 **A quote carries source text.** It reproduces the source verbatim inside the
 claim file, so the claim's effective scope governs the exposure of that text.
 Implementations SHOULD warn when a claim's effective scope is wider than the
@@ -627,7 +643,9 @@ separately, where it could drift from the basis.
 
 Claims are immutable once created. Correction happens through synthesis or
 retraction, never overwriting. Retraction is recorded, not deletion —
-provenance must always be traversable.
+provenance must always be traversable. Text that should no longer be
+readable is [redacted](#redaction): removed, with the removal recorded, and
+the object kept.
 
 ---
 
@@ -751,10 +769,12 @@ retracted:
 
 Rules:
 
-- Adding a `retracted` block is the **only permitted modification** to an
-  existing object file. `timestamp`, `reason`, and `source` are required.
+- Adding a `retracted` block is one of **exactly two permitted
+  modifications** to an existing object file; the other is
+  [redaction](#redaction). `timestamp`, `reason`, and `source` are required.
 - It is never removed. Reinstatement is a new claim or synthesis that cites
-  the retracted object.
+  the retracted object. A redaction may remove its `reason`, and only that:
+  the block stands, the object stays retracted, and its `kind` still counts.
 - Syntheses are claims and may be retracted. Merge records may be retracted.
 - The index mirrors it as `retracted: true`.
 
@@ -814,6 +834,125 @@ full thesis/antithesis synthesis would be ceremony. It MUST reference an
 existing claim or synthesis; validators reject a dangling target. It is
 informational — for readers and `lineage_trace` — and does not make the target
 an input of anything, nor does it count as synthesis for conflict detection.
+
+---
+
+### Redaction
+
+Retraction says a claim is wrong and keeps its text, because a correction is
+only checkable against what it corrected. Sometimes the text itself is the
+problem: a true claim carrying a third party's medical detail, a quote that
+discloses more of a private source than the claim needs, a retraction reason
+that repeats what it retracts. Redaction removes the text and keeps the
+object — its id, its place in the lineage graph, and a record of who removed
+what, when, and why:
+
+```yaml
+# claims/2026-08/clm_01a01ed5-c040-73b0-ba7b-da8a27ab53a6.yaml
+id: clm_01a01ed5-c040-73b0-ba7b-da8a27ab53a6
+type: claim
+subject: par_01916f03-b680-71a2-bad4-40b49d5a5a6d
+source:
+  author: ben
+  harness: claude
+  document:
+    author: urn:dkf:01a0…:jane
+    hash: sha256:9f2a…
+context: {scope: personal}
+timestamp: 2026-08-20T11:02:00Z
+evidential: observed
+retracted:
+  timestamp: 2026-08-21T09:12:00Z
+  source: {author: ben}
+  kind: supersession
+redacted:
+  timestamp: 2026-11-03T10:00:00Z
+  reason: Third party's health detail; not needed for the belief
+  source: {author: ben}
+  fields: [content, source.document.ref, source.document.quote, retracted.reason]
+```
+
+The block carries `timestamp`, `reason`, `source` and `fields`, all
+required, and is written after `retracted`. Every path in `fields` is absent
+from the file, and a field the format otherwise requires — `content`, a
+synthesis's `unresolved`, a mapping's `ref`, a retraction's `reason` — is
+valid when absent **only** because the block lists it. That is what lets a
+validator tell a redaction from a malformed file.
+
+**What can be redacted is a closed set:** `content`, `unresolved` (syntheses),
+`source.document.ref`, `source.document.quote`, `source.document.hash`, and
+`retracted.reason`. A writer refuses any other path, and a validator
+rejects a file listing one. It is closed because each member has a defined
+consequence below, and because none of them is mirrored in the
+[index](#indexyaml): `subject`, `context`, `timestamp`, `source.author` and
+`source.document.author` are, and sealed segments never change, so a
+redaction must never change an entry. That costs something — `topics` such as
+`health` can be revealing, and `document.author` names the person a claim
+was reported from — and is left to a later version that can mask entries. A
+bare-string `document` is its `ref`: redacting `source.document.ref` removes
+`document` altogether. On a mapping the other members stay, which is how
+`author` survives in the example. Only claims and syntheses are redacted;
+particulars, merge records and promotion records are not.
+
+**Redaction is not a kind of retraction.** They answer different questions —
+retraction whether the claim is true, redaction whether it should be
+readable — and an object may carry either block, both, or neither. A wrong
+claim can stay readable forever, and a true one can need redacting. Folding
+redaction into `kind` would also corrupt what `kind` is for: a `defect`
+counts against the harness and the author that produced the claim (see
+[Trust and Provenance](#trust-and-provenance)), and a redaction is no
+evidence that anyone did anything wrong. There is still no fourth joint.
+
+**Redacting `content` withdraws the object.** A claim with no content carries
+no belief, so it is treated exactly as a retracted one. The format calls
+both **withdrawn**: retracted, or with `content` redacted. A withdrawn object
+is out of recall unless retracted objects are asked for, is never `current`,
+is in no `unsynthesised` set, stands in no asserted-by or reported-from
+relation, and makes everything citing it `stale` — wherever this
+specification says "retracted" of what is excluded or what goes stale, it
+means withdrawn. Redacting **only evidence** — `ref`, `quote`, `hash` —
+leaves the assertion standing: the claim stays live, and its source becomes
+partly or wholly unverifiable (see [Drift](#drift)). That is the commoner
+case in practice, because a quote reproduces its source verbatim and travels
+with the claim when it is promoted. Redacting only a synthesis's
+`unresolved` leaves it eligible to be `current`, since its belief is its
+`content`.
+
+**It is irreversible and never implicit.** The block is never removed and a
+redacted field is never restored; reinstatement, as for retraction, is a new
+claim or synthesis. A file carries at most one `redacted` block: redacting
+again replaces its `timestamp`, `reason` and `source` and makes `fields` the
+union of old and new. Nothing redacts as a side effect — not retraction, not
+promotion, not merge, not synthesis. The `reason` must not restate what it
+removed; no tool can check that, so it is a rule for whoever writes one.
+
+**Redaction does not cascade.** No other object changes. But when an object's
+content is redacted, three kinds of object may repeat it in their own text:
+syntheses citing it as an input, inferred claims citing it in their `basis`,
+and the claim its retraction's `superseded-by` names. Those already `stale`
+are told to re-reason; that is not the same as being told their prose may
+contain what was just removed. Each one that is not itself withdrawn is
+reported as **`restates_redacted`**, naming the redacted object — a finding
+about an object, reported per object, because redacting it or not is decided
+there. It stops being reported when the candidate is withdrawn. No tool
+judges whether the text actually restates anything; a person reads it. There
+is no record for "looked, it's fine": the finding is noisy rather than
+silent, and a dismissal record can be added if the noise proves costly.
+
+**What redaction does not remove.** It removes text from the object's current
+file, and so from what a conformant implementation reads, recalls, serves,
+and embeds — the [semantic cache](#recall-by-query) deletes the vectors of
+a redacted field, because an embedding can disclose what it was computed
+from. It makes no claim about anything else: earlier versions in version
+control, clones, crawlers, and consumers that fetched the object before. In
+a git workspace the text stays in history, and an implementation whose store
+is a git repository MUST say so when it redacts. An implementation whose
+store controls access to prior versions — a database, a hosted service — MAY
+restrict it; nothing in the format depends on whether it does. Erasure from
+history is a property of the store, not of the file, and this format
+specifies the file.
+
+Redaction requires a `dkf/0.3` workspace; see [Migration](#migration).
 
 ---
 
@@ -941,6 +1080,7 @@ DSYNTHESIS    extends DCLAIM
                 → is itself a valid input to further syntheses
 
 records       retraction — a block appended to any of the above
+              redaction  — a block recording text removed from a claim or synthesis
               merge      — joins two particular URIs
 ```
 
@@ -953,14 +1093,18 @@ Without an LLM in the loop, "contradiction" is not computable. What *is*
 computable is what has not been reconciled, and every consumer can rely on
 that. For a particular (or merge equivalence class):
 
-- **current** — the most recent non-retracted synthesis whose `subject` is in
+- **current** — the most recent non-withdrawn synthesis whose `subject` is in
   the class, ordered by `timestamp`, ties broken by id.
-- **unsynthesised** — non-retracted claims and syntheses with `subject` in the
+- **unsynthesised** — non-withdrawn claims and syntheses with `subject` in the
   class that are not in the transitive `inputs` of `current`. The transitive
   `inputs` follow synthesis `inputs` only, not a claim's `basis`.
-- **stale** — non-retracted claims and syntheses with `subject` in the class
-  that cite a retracted object, directly or transitively, through `inputs` or
+- **stale** — non-withdrawn claims and syntheses with `subject` in the class
+  that cite a withdrawn object, directly or transitively, through `inputs` or
   `basis`.
+
+An object is **withdrawn** when it is retracted or its `content` is
+[redacted](#redaction). Until redaction existed the two words meant the same
+thing.
 
 **The current belief about a particular is `current`**, even when claims
 post-date it. Those later claims are not silently the new belief; they are
@@ -982,7 +1126,9 @@ Two consequences follow:
   syntheses that cite it untouched — they are immutable and were already
   reasoned. They are reported as `stale` until a newer synthesis supersedes
   them. A `superseded-by` pointer is not synthesis: the replacement object is
-  `unsynthesised` like any other.
+  `unsynthesised` like any other. Redaction does not cascade either: a
+  synthesis citing a content-redacted input is `stale`, unchanged, and also
+  reported as `restates_redacted` (see [Redaction](#redaction)).
 - **Cross-particular inputs are per class.** A claim about Y cited by a
   synthesis about X is not thereby synthesised for Y.
 - **Citing in a basis is not synthesis.** What an inferred claim's `basis`
@@ -1004,7 +1150,8 @@ and they change no conflict set.
 ## Unbounded History, Bounded Work
 
 A workspace never shrinks. A retraction appends, a synthesis keeps its
-inputs, and nothing is deleted — that is the product, and it means a
+inputs, and no object is deleted — a redaction removes text from one, never
+the object — that is the product, and it means a
 workspace grows for as long as anyone learns anything in it. What must not
 grow with it is the cost of touching it. This specification requires that no
 operation it defines read data in proportion to the workspace's history when
@@ -1197,7 +1344,10 @@ defaults:                                     # optional
 `format` and `workspace.id` are required; everything else is optional.
 Implementations MUST ignore unknown keys so the file can be extended.
 
-`format` names the layout: `dkf/0.1` is flat, `dkf/0.2` is sharded. A
+`format` names the layout: `dkf/0.1` is flat, `dkf/0.2` is sharded, and
+`dkf/0.3` is sharded with [redaction](#redaction). A workspace containing a
+`redacted` block is `dkf/0.3`, and validation of a `dkf/0.2` one carrying
+such a block fails naming the object and the version required. A
 reader MUST refuse to open a workspace whose `format` it does not implement,
 naming the version — it must not open the workspace and read what it can.
 The rule exists because a change of *shape* cannot be made additively: the
@@ -1210,6 +1360,13 @@ implementation has done since its first commit — it refuses any `format` it
 does not implement, on every verb, naming the version it found — and what
 every reader must share. A `dkf/0.2` reader reads both layouts, and no
 workspace is obliged to migrate.
+
+`dkf/0.3` changes no shape, and bumps the version anyway, because the same
+argument applies to a field that can go *missing*. A `dkf/0.2` reader must
+ignore the `redacted` block it does not understand, and would then meet a
+claim with no `content`: reject the workspace, or — worse — recall an empty
+belief as though it were one. The refusal rule turns both into a clean
+refusal naming `dkf/0.3`.
 
 `defaults` are applied by **writers only**, when a tool call omits a value:
 `scope` fills `context.scope`; `source` fields fill an incomplete `source`.
@@ -1393,7 +1550,8 @@ sealed month in which objects were retracted but none minted yields a
 segment with an empty `entries`, which is correct and slightly odd; a month
 with neither yields no segment. A
 segment is itself a valid index document, `format`, `entries` and
-`retracted` and nothing else, and once sealed it never changes.
+`retracted` — and in `dkf/0.3` `redacted` — and nothing else, and once
+sealed it never changes.
 `index/legacy.yaml` carries `format` and `entries` only and is listed first.
 Segment paths are relative to `index.yaml`.
 
@@ -1439,6 +1597,34 @@ retracted means reading every list, a cost accepted because no conformant
 writer creates such objects and their number is fixed at migration. In a
 `dkf/0.1` index the flag stays on the entry, and a `dkf/0.2` reader honours
 it there.
+
+**`redacted`** is the same mechanism for the one other way an object leaves
+recall. In a `dkf/0.3` index the root and every segment carry a `redacted`
+list beside `retracted`: the ids, sorted, of objects whose `content` was
+[redacted](#redaction), keyed by the month of the redaction's `timestamp` —
+in the root while that month is open or later, in its segment once it
+seals, under the same guard against dating one into a sealed month. A later
+redaction that first adds `content` lists the id under the month of the
+block's new `timestamp`.
+
+```yaml
+# index.yaml in a dkf/0.3 workspace — the tail of the root
+retracted:
+  - clm_01a01ed5-c040-73b0-ba7b-da8a27ab53a6
+redacted:                      # content-redacted in an open month or later
+  - clm_01a01ed5-c040-73b0-ba7b-da8a27ab53a6
+```
+
+It is a separate list rather than more ids in `retracted` so that the index
+still says *why* an object left: retracted means judged wrong, and anything
+counting `kind` from the index must not count redactions. An object both
+retracted and content-redacted is in both. Evidence-only redactions are in
+neither, because they change nothing the index mirrors — and no redaction
+changes an entry, because no redactable field is mirrored by one. That is
+the property that keeps sealed segments byte-immutable through redaction.
+The filtering bound carries over unchanged: an object minted in month M is
+withdrawn if and only if its id is in `retracted` or `redacted` of the root
+or of a segment for M or later.
 
 Baseline fields: every entry has `id` and `type`; particulars have `uri`;
 claims and syntheses have `subject`; syntheses have `inputs`; claims that
@@ -1488,12 +1674,13 @@ change no count, so the drift check is not where a retraction dated into a
 sealed month is found. Then per document — the root against a regenerated
 tail, any differing segment against its regenerated self, and
 `index/legacy.yaml` against its own — both `entries` and `retracted` are
-compared, an id in one list and not the other being drift; a segment
+compared, an id in one list and not the other being drift — in `dkf/0.3`
+`redacted` is compared exactly as `retracted` is; a segment
 listed and absent, or present and unlisted, is drift too. `validate` does
 more, because it can: it already parses every object file, so it
 regenerates each sealed month's `retracted` list from those files and
-compares it with the committed segment, and a retraction dated into a
-sealed month — written against the guard, or merged from a branch open
+compares it with the committed segment — `redacted` too, in `dkf/0.3` —
+and a retraction or redaction dated into a sealed month — written against the guard, or merged from a branch open
 across two boundaries — fails validation naming the object and the
 segment. The two operations guarantee different things, and a reader of
 either should know which. The check exists to catch the index lagging *changes to the workspace*, and
@@ -1530,11 +1717,23 @@ with full history. A migration that changed any payload has not been done
 correctly. Migration is optional; a flat workspace stays valid, and the
 ceilings it faces are documented above rather than forbidden.
 
+A `dkf/0.2` workspace becomes `dkf/0.3` by rewriting `format` in `dkf.yaml`,
+and nothing else: no file moves, no payload changes — so every signature
+that verified before verifies after — and the index gains
+its `redacted` lists, empty, on its next rebuild. A `dkf/0.1` workspace
+goes through `dkf/0.2` first. A writer refuses to redact in a workspace
+before `dkf/0.3` and names this migration; it never migrates as a side
+effect of a redaction, because the migration is what makes older readers
+refuse the workspace and that should be decided, not discovered. A
+`dkf/0.3` workspace that has never been redacted can be set back to
+`dkf/0.2` by rewriting `format`; one with a redaction cannot, which is the
+point.
+
 ---
 
 ## MCP Server Tools
 
-A reference MCP server implementation exposes eleven tools grouped into four
+A reference MCP server implementation exposes twelve tools grouped into four
 areas.
 
 ### Particular Tools
@@ -1550,6 +1749,7 @@ areas.
 |---|---|
 | `claim_assert(particular_id, content, evidential, basis, source, context, confidence, scope)` | Create a new claim. The subject is the thing in the world the fact is about — never the document or feed it was read in — and `content` states the fact; what was read belongs in `source.document`. `evidential` is required and has no default; `held` with a `confidence` is refused. `basis` lists the claims and syntheses an `inferred` claim was inferred from; it is refused unless `evidential` is `inferred`, and an `inferred` claim without one is written with an `inferred_without_basis` warning. If scope is omitted the workspace default (or `personal`) is written into the file. |
 | `claim_retract(claim_id, reason, source)` | Append a `retracted` block to a claim or synthesis. Never deletes — provenance is preserved. |
+| `knowledge_redact(object_id, fields[], reason, source)` | Remove the listed fields from a claim or synthesis and record a `redacted` block (see [Redaction](#redaction)). Refuses any path outside the redactable set, and any workspace before `dkf/0.3`. Redacting `content` withdraws the object. Irreversible; the removed text remains in any version history the store keeps, and a git-backed implementation says so. |
 
 ### Synthesis Tools
 
@@ -1561,7 +1761,7 @@ areas.
 
 | Tool | Description |
 |---|---|
-| `knowledge_recall(particular_id \| query, author?, scope, include_retracted, limit)` | Retrieve claims and syntheses about a particular or topic, or by `author` — an id, URI, label, or alias — returning objects asserted by or reported from that particular's merge class, each carrying `relations` — a set of `asserted` and/or `reported`, never empty. Combinable with the other filters. Returns in lineage order, identifying `current`. Operates across merged particulars. A `query` is first resolved to particulars and then recalled exactly as by particular, each result carrying `resolution` — `label`, `alias`, `lexical`, or `semantic` — saying how it was found (see [Recall by query](#recall-by-query)). |
+| `knowledge_recall(particular_id \| query, author?, scope, include_retracted, limit)` | Retrieve claims and syntheses about a particular or topic, or by `author` — an id, URI, label, or alias — returning objects asserted by or reported from that particular's merge class, each carrying `relations` — a set of `asserted` and/or `reported`, never empty. Combinable with the other filters. Returns in lineage order, identifying `current`. Operates across merged particulars. A `query` is first resolved to particulars and then recalled exactly as by particular, each result carrying `resolution` — `label`, `alias`, `lexical`, or `semantic` — saying how it was found (see [Recall by query](#recall-by-query)). `include_retracted` governs every [withdrawn](#conflict-semantics) object — retracted or content-redacted; with it, a redacted object is returned as its file stands, without the redacted fields. |
 | `conflict_detect(particular_id \| claim_ids[])` | Return the structural `current` / `unsynthesised` / `stale` sets and a suggested synthesis priority (see [Conflict semantics](#conflict-semantics)). Judging actual contradiction is left to the harness. |
 | `lineage_trace(claim_id, depth)` | Traverse the provenance chain of any claim or synthesis — synthesis `inputs` by role, an inferred claim's `basis` labelled `basis`, and `superseded-by` successors — visiting each object once. Returns a structured tree. |
 
@@ -1693,6 +1893,11 @@ a model:
   a write or a pull is the ids in the index that the cache lacks.
   Retracted objects may stay embedded: stage two removes them, so
   retraction never touches the cache.
+- Redaction does touch it, and is the one change that does. An embedding can
+  disclose the text it was computed from, so a vector of a field since
+  [redacted](#redaction) is never consulted and is deleted no later than the
+  cache's next update. Content-redacted ids come from the index's `redacted`
+  lists. Only `content` is embedded, so evidence-only redactions need nothing.
 
 A missing, partial or stale cache MUST NOT cause an object to be returned
 that recall by particular would not return. It MAY cause a particular to go
@@ -1794,14 +1999,21 @@ fetching to HTTP.
 
 **Cryptographic signing** — claims may be signed with the publisher's DID.
 Signatures are optional in v0.1 but the field is reserved, and the payload it
-would cover is defined: the object parsed to its data model with `retracted`
-and `signature` removed, canonicalised per
+would cover is defined: the object parsed to its data model with `retracted`,
+`redacted` and `signature` removed, canonicalised per
 [RFC 8785](https://www.rfc-editor.org/rfc/rfc8785) (JSON Canonicalization
 Scheme). Not the file bytes — so a signature survives reformatting, field
 reordering, and the later appending of a retraction, none of which change
 what was asserted, and `confidence: 0.9` and `0.90` sign identically for the
 same reason CRLF and LF hash identically: normalise the artefact, sign the
 assertion.
+
+A [redaction](#redaction) is different, because it removes part of what was
+asserted. A signature over a field since redacted cannot verify, and that is
+reported as `signature_redacted` — a fact about the corpus, in aggregate —
+never as an invalid signature: the `redacted` block already says exactly
+what changed and who changed it, and nothing about the object is in doubt
+that the block does not declare.
 
 The payload is built from the parsed, *typed* data model, never from a
 generic YAML-to-JSON conversion — a YAML 1.2 parser returns an unquoted
@@ -1855,12 +2067,14 @@ distinction governs how it is reported. A *finding about an object* is
 something someone might act on at that object — drift on a claim's source, a
 synthesis wider than its inputs, an unverifiable defect, a dangling
 reference (including a dangling `basis` id), a `basis` on a claim that isn't
-`inferred` (`basis_not_inferred`) — and is reported per object, because the object is the unit of
+`inferred` (`basis_not_inferred`), an object whose text may restate a
+redacted one (`restates_redacted`) — and is reported per object, because the object is the unit of
 action. A *fact about the corpus* carries no per-object action — an
 `undeclared` evidential, an inferred claim without a basis
 (`inferred_without_basis`), a legacy compatibility marker, a document that
 cannot be verified, an author name that resolves to no particular or to
-several — and is reported in aggregate: its discovery value is spent the
+several, a signature over a since-redacted field (`signature_redacted`) —
+and is reported in aggregate: its discovery value is spent the
 first time it is seen, its cost recurs on every run, and it cannot be
 cleared at any object — either because clearing it would mean rewriting an
 immutable file, or because the action that clears it is at the workspace and
@@ -1879,10 +2093,13 @@ whose output is dominated by permanent unactionable lines has spent
 **Contradiction is signal, not error.** The format is built around preserving
 disagreement, not resolving it silently.
 
-**Provenance is non-negotiable.** Nothing is overwritten. Appending a
-retraction is the only modification to an existing file; synthesis is the
-only way to change what is believed. The full reasoning chain is always
-traversable.
+**Provenance is non-negotiable.** Nothing is overwritten. An existing file
+changes in two ways only, both recorded in the file itself: appending a
+retraction, and redacting — removing listed text and saying who removed it,
+when, and why. Synthesis is the only way to change what is believed.
+Redaction removes text, never an object, an id, or a place in the graph, so
+the full reasoning chain is always traversable, even where some of its text
+is no longer readable.
 
 **Minimal spec, layered implementation.** Three knowledge objects —
 particular, claim, synthesis — are the complete core, plus records —
@@ -1929,6 +2146,15 @@ It touches three items deferred past v0.1 — DID binding for the reserved
 signature, promotion by particular, and whether a synthesis carries a
 `document` — and takes none of them; each is easier to decide now that an
 author has a URI.
+
+[Redaction](#redaction) introduced `dkf/0.3`, and is breaking in the one
+sense the version exists to capture: a redacted claim has no `content`, and
+a `dkf/0.2` reader would misread it rather than refuse it, so a workspace
+that redacts must say so in `format`. Nothing changes for a workspace that
+never redacts, and migrating one rewrites `format` alone. It is scoped to
+hiding text from the current object — not erasure from history, which is
+the store's business, and not particulars, topics, or `document.author`,
+which the index mirrors.
 
 A reference implementation,
 [`particulars-cli`](https://github.com/nodelogicau/particulars-cli), exists
