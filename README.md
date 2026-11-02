@@ -2147,7 +2147,31 @@ signature, promotion by particular, and whether a synthesis carries a
 `document` — and takes none of them; each is easier to decide now that an
 author has a URI.
 
-[Redaction](#redaction) introduced `dkf/0.3`, and is breaking in the one
+**v0.2 was declared on 2026-11-03** (tag `v0.2`). Its one breaking change
+is the [sharded layout](#sharding): `format: dkf/0.2` puts each object in a
+month directory derived from its id and splits the index into a root and
+sealed monthly segments, so that no operation costs in proportion to a
+workspace's history. A reader that implements only `dkf/0.1` refuses such
+a workspace instead of misreading it, and a flat `dkf/0.1` workspace stays
+valid with no obligation to migrate. Everything else since v0.1 is
+additive:
+- authors as particulars;
+- workspace conventions for agents;
+- a character-exact definition of when a quote appears;
+- recall by query, with an optional semantic cache that is never
+  authoritative;
+- the *Purpose* section;
+- the `basis` of an inferred claim.
+
+One issue was open when v0.2 was declared, and it is listed rather than
+closed: recall by query's `limit` does not bound the size of the response,
+and its fixed order favours common words
+([#38](https://github.com/nodelogicau/particulars/issues/38)). That is tool
+behaviour, not the file format, and no file is read differently because
+of it. Redaction is not part of v0.2. It follows as `dkf/0.3`.
+
+Since v0.2, [redaction](#redaction) introduces `dkf/0.3`, not yet declared,
+and is breaking in the one
 sense the version exists to capture: a redacted claim has no `content`, and
 a `dkf/0.2` reader would misread it rather than refuse it, so a workspace
 that redacts must say so in `format`. Nothing changes for a workspace that
