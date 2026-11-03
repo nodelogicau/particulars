@@ -18,7 +18,7 @@
 ## 4. Status and errata
 
 - [x] 4.1 Add a v0.2 erratum to the README Status section. It says that the sealed-month rule named only retraction, while `particular_define` already updated particulars in place, and that this change corrects the text without changing the format (#51).
-- [ ] 4.2 After merge, add an "Errata" line to the GitHub v0.2 release notes linking to the Status section.
+- [x] 4.2 After merge, add an "Errata" line to the GitHub v0.2 release notes linking to the Status section.
 
 ## 5. Verification
 
