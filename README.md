@@ -1979,7 +1979,7 @@ Publishers exposing DKF knowledge on the public internet place a manifest at
 a well-known path:
 
 ```yaml
-# https://example.com/.well-known/knowledge.yaml
+# https://example.com/.well-known/dkf.yaml
 format: dkf/0.2
 index: /knowledge/index.yaml
 feeds:
@@ -2022,6 +2022,133 @@ format. The publishing contract above is the whole contract, and index
 `timestamp` fields already give incremental fetching what it needs — the
 model that served `.ics` and RSS, which specified the artefact and left the
 fetching to HTTP.
+
+### The manifest path
+
+The suffix is `dkf.yaml` because a well-known name is a registry entry
+([RFC 8615](https://www.rfc-editor.org/rfc/rfc8615)), and the v0.1 path,
+`knowledge.yaml`, would have claimed a word far wider than this format. The
+extension stays because static hosts derive the content type from it and
+cannot be told otherwise: an extensionless `dkf` on GitHub Pages is served as
+`application/octet-stream`.
+
+Publishers write `/.well-known/dkf.yaml`, and never only the v0.1 path. One
+that serves both during a transition may; where both exist, `dkf.yaml`
+governs. A consumer requests `/.well-known/dkf.yaml` first and requests
+`/.well-known/knowledge.yaml` **only** when that returns 404 or 410. A manifest
+found there is used, and reported as a legacy compatibility fact, in
+aggregate. Any other failure — a 5xx, a timeout, a TLS error — is not a
+reason to probe the old path: it means the publisher's server is unwell, and
+a second request would report an outage as an absence.
+
+A host that builds with Jekyll, as GitHub Pages does by default, skips
+directories whose names start with a dot; `include: [".well-known"]` in
+`_config.yml`, or a `.nojekyll` file, publishes it.
+
+`dkf.yaml` is used unregistered for now, as `urn:dkf:` is, and registration
+would change no path. The registration it is prepared for:
+
+| Field | Value |
+|---|---|
+| URI suffix | `dkf.yaml` |
+| Change controller | the maintainers of this specification |
+| Specification document | this specification, *Public Discovery* |
+| Status | permanent |
+| Related information | the [`application/dkf+yaml`](#media-type) media type |
+
+### Linking to knowledge
+
+`/.well-known` answers "given a publisher, what do I fetch?". Federation by
+shared URI needs the other question answered too — given a thing, who
+publishes about it — and a fixed path on the publisher's own origin cannot
+answer it, because the thing's URI is usually somewhere else.
+[Web Linking](https://www.rfc-editor.org/rfc/rfc8288) can. The resource at a
+published particular's URI, or any page, may point at a manifest with the
+registered `describedby` relation, typed as DKF:
+
+```http
+HTTP/1.1 200 OK
+Link: <https://example.com/.well-known/dkf.yaml>; rel="describedby"; type="application/dkf+yaml"
+```
+
+```html
+<link rel="describedby" type="application/dkf+yaml"
+      href="https://knowledge.example.org/.well-known/dkf.yaml">
+```
+
+The two are equivalent and consumers accept either; the `<link>` is for a
+host that cannot set headers. Relative targets resolve as each
+serialisation defines, a page may carry several links, and the target may be
+on another origin — that is the case the link exists for: a person's
+particular URI is often a profile page on a site they do not control, while
+their knowledge is published elsewhere. A publisher that controls what is
+served at a particular's URI should link from it to each manifest that
+publishes claims about it.
+
+The type is what makes the relation usable. `describedby` says only that the
+target describes the context, and a page may also link RDF or JSON-LD that
+way; a consumer treats as a manifest only a link typed
+`application/dkf+yaml`. The target is always a manifest, never an object, a
+record, or an index document. From the manifest a consumer reaches the index,
+whose particular entries carry `uri`, and from there the published claims
+whose `subject` is that particular — and a link straight to a claim would
+bypass the feed, which is what decides what is published. Following links
+is a consumer's choice; this is still not a crawl protocol.
+
+**A link is not an endorsement.** It is the pointer of whoever controls the
+linking resource, saying knowledge about it is there. It does not make the
+linked publisher's claims true, authoritative, or verified, and its absence
+makes no publisher's claims about that URI less admissible — Wikidata will
+never link to anyone's manifest, and claims about a Wikidata entity stand on
+equal terms, as they did before linking existed. It is the one signal in the
+format that comes from the subject's side, and a consumer may record it
+alongside the others in [Trust and Provenance](#trust-and-provenance).
+
+### Media type
+
+Every document this specification defines — object and record files, the
+index root, sealed segments and `index/legacy.yaml`, and the manifest — is
+`application/dkf+yaml`, under the `+yaml` structured suffix of
+[RFC 9512](https://www.rfc-editor.org/rfc/rfc9512). One type serves them all
+because a consumer already tells them apart by the path it fetched and by
+`type`, and separate subtypes would say again what the path says.
+
+It has **no parameters**. A layout version is read from the `format` that a
+document or its index declares and from nothing else — the rule that a
+reader never infers the layout from what it finds extends to what a header
+says, and a header set by a host is less to be trusted than the document it
+labels. A `format=` or `charset=` parameter is ignored. Documents are UTF-8,
+without a byte order mark.
+
+Publishers that control their headers should serve the type. Consumers do
+not depend on it: a document fetched from a path that a manifest or index
+names is not rejected for arriving as `application/yaml`, `text/yaml`,
+`application/x-yaml`, `text/plain`, `application/octet-stream`, or with no
+type at all, since the path is what makes it a DKF document and most static
+hosts cannot be configured. Under any other type it is parsed as it would be
+otherwise, and reported only if it fails to parse — an HTML error page served
+with status 200 is a segment that did not parse, not one with the wrong
+label.
+
+The type is used unregistered for now, and registration would change no
+document. The template it is prepared for
+([RFC 6838](https://www.rfc-editor.org/rfc/rfc6838) §5.6):
+
+| Field | Value |
+|---|---|
+| Type name | `application` |
+| Subtype name | `dkf+yaml` |
+| Required parameters | none |
+| Optional parameters | none |
+| Encoding considerations | 8bit; UTF-8 |
+| Security considerations | No active content. Documents must not carry YAML anchors or aliases, alias expansion being a resource-exhaustion vector (see [Trust and Provenance](#trust-and-provenance)), and a consumer resolves no tag outside the YAML 1.2 core schema. An object may quote its source verbatim; its effective scope governs that exposure. |
+| Interoperability considerations | Consumers accept generic YAML and text labels, as above. |
+| Published specification | this specification |
+| Applications that use this media type | DKF publishers, crawlers, and workspace tools |
+| Fragment identifier considerations | as for the `+yaml` suffix; none added |
+| File extension | `.yaml` |
+| Intended usage | COMMON |
+| Change controller | the maintainers of this specification |
 
 ---
 
@@ -2219,6 +2346,17 @@ hiding text from the current object — not erasure from history, which is
 the store's business, and not particulars, topics, or `document.author`,
 which the index mirrors.
 
+Also since v0.2, [Public Discovery](#public-discovery) adopts three web
+standards. The manifest moves from `/.well-known/knowledge.yaml` to
+`/.well-known/dkf.yaml`, a name fit to register. This is breaking for
+discovery alone: no workspace file, index document or `format` value
+changes, consumers fall back to the old path on a 404 or 410, and nothing
+in the ecosystem served the old one. The rest is additive. A resource can
+point at the knowledge about it with a typed `describedby` link, and every
+DKF document has a media type, `application/dkf+yaml`, that no consumer
+depends on. Registration templates for both names are carried and not yet
+submitted.
+
 A reference implementation,
 [`particulars-cli`](https://github.com/nodelogicau/particulars-cli), exists
 and its feedback shaped the current text.
@@ -2256,7 +2394,16 @@ unregistered `urn:dkf:` namespace ·
 the signed payload is built from the typed data model rather than from the
 parse ·
 [FIPS 180-4](https://csrc.nist.gov/pubs/fips/180-4/upd1/final) SHA-256 as the
-document hash writers write.
+document hash writers write ·
+[RFC 8615](https://www.rfc-editor.org/rfc/rfc8615) Well-Known URIs for the
+manifest path ·
+[RFC 8288](https://www.rfc-editor.org/rfc/rfc8288) Web Linking, and its
+registered `describedby` relation, for pointing a resource at the knowledge
+about it ·
+[RFC 9512](https://www.rfc-editor.org/rfc/rfc9512) the YAML media type and
+the `+yaml` suffix under which `application/dkf+yaml` is defined ·
+[RFC 6838](https://www.rfc-editor.org/rfc/rfc6838) media type registration,
+whose template it carries.
 
 **Identity schemes admitted as author URIs.**
 [ORCID](https://orcid.org) ·
