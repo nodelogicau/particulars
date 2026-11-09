@@ -290,10 +290,54 @@ bytes would report drift on every claim in a workspace checked out on
 Windows, while trailing whitespace differs because somebody edited the file,
 and normalising it would blind the check to a class of real change.
 
-Writers should write `sha256`. Readers accept any `<algorithm>:<digest>` and
-report an algorithm they do not implement as unverified rather than invalid —
-otherwise two conformant implementations could be unable to check each
-other's hashes, which defeats the point of recording one.
+**The hash has one grammar**, borrowed from the OCI image specification's
+digest: `algorithm ":" encoded`, where the algorithm is lowercase
+alphanumeric components joined by single `+`, `.`, `_` or `-`, and the
+encoded part is `[a-zA-Z0-9=_-]+`. Two algorithms are registered, as OCI
+registers them: `sha256`, whose encoded part is 64 hexadecimal digits, and
+`sha512`, with 128. Writers write `sha256`; readers implement it and may
+implement `sha512`. Any other algorithm that matches the grammar is opaque —
+its encoded part is not interpreted — and is reported as unverified rather
+than invalid, since otherwise two conformant implementations could be unable
+to check each other's hashes, which defeats the point of recording one.
+
+The grammar is borrowed rather than written because writing one is how the
+gap arose: `<algorithm>:<digest>` alone said nothing about hex or base64, or
+about case, so two implementations each following it could write hashes the
+other could not compare — and the failure was silent, since a hash that
+never matches reads as context drift on every run.
+
+A hash is in **canonical form** when a registered algorithm is written in
+lowercase with lowercase hexadecimal digits of its length, or an
+unregistered one matches the grammar. Writers write canonical form and
+refuse anything else, naming the canonical form rather than normalising
+what they were given — `SHA-256:9F2A…` silently lowercased would hide that
+the caller's tool emits something else. Readers are lenient about form and
+exact about value: for the registered algorithms they also accept
+hexadecimal in either case, the algorithm name in any case, and the IANA
+spellings `sha-256` and `sha-512`, and compare by algorithm and digest
+value. The list is closed — `sha2-256` is an unregistered algorithm, not an
+alias — because a closed list is where implementations cannot part. These
+forms were valid before the grammar was pinned, and a file cannot be
+rewritten, so a reader accepts them and reports `hash_noncanonical`, a fact
+about the corpus.
+
+**A malformed hash is read as no hash.** A hash is malformed when it does not
+match the grammar, or names a registered algorithm with an encoded part that
+is not hexadecimal or not its length: a truncated `sha256:9f2a`, a base64
+digest under `sha256:`, a bare digest with no prefix. Writers refuse one. A
+reader verifies the reference as though the mapping carried no `hash` — by
+the quote alone, or as unverified when there is none — and reports
+`hash_malformed` against the object. It is never drift: the value never named
+the document, and reporting it as context drift would be a false alarm that
+never clears. It never fails validation, because the file cannot be
+rewritten; this is the rule for a quote that folds to nothing, applied to
+the other signal. It is a finding rather than a fact because it can be
+cleared at the object: [redacting](#redaction) `source.document.hash`
+removes it, in a `dkf/0.3` workspace.
+
+The digests in this specification's examples, `sha256:9f2a…`, are elided for
+width. A file carries all 64 digits.
 
 **The locator is a verbatim quote, never an offset.** Line and byte ranges
 break the moment anyone inserts text above them, which would report drift for
@@ -347,6 +391,8 @@ means something.
 | absent | matches | **quote drift** — the quote never matched this document; it was miscopied or taken from another revision |
 | present | none | nothing the quote can see has moved; the hash is unverified |
 | absent | none | **quote drift**, with nothing to say about whether the document changed |
+
+A malformed hash takes the *none* rows: it is read as no hash at all.
 
 The context-drift row is why hashing the quote alone is not enough. A document
 reading "In staging, the billing service listens on 443" yields the claim
@@ -2225,12 +2271,14 @@ something someone might act on at that object — drift on a claim's source, a
 synthesis wider than its inputs, an unverifiable defect, a dangling
 reference (including a dangling `basis` id), a `basis` on a claim that isn't
 `inferred` (`basis_not_inferred`), an object whose text may restate a
-redacted one (`restates_redacted`) — and is reported per object, because the object is the unit of
+redacted one (`restates_redacted`), a document hash that is malformed
+(`hash_malformed`) — and is reported per object, because the object is the unit of
 action. A *fact about the corpus* carries no per-object action — an
 `undeclared` evidential, an inferred claim without a basis
 (`inferred_without_basis`), a legacy compatibility marker, a document that
 cannot be verified, an author name that resolves to no particular or to
-several, a signature over a since-redacted field (`signature_redacted`) —
+several, a signature over a since-redacted field (`signature_redacted`), a
+hash accepted in a form other than canonical (`hash_noncanonical`) —
 and is reported in aggregate: its discovery value is spent the
 first time it is seen, its cost recurs on every run, and it cannot be
 cleared at any object — either because clearing it would mean rewriting an
@@ -2357,6 +2405,15 @@ DKF document has a media type, `application/dkf+yaml`, that no consumer
 depends on. Registration templates for both names are carried and not yet
 submitted.
 
+The document hash now has a grammar: the OCI digest grammar, with `sha256`
+and `sha512` registered and a canonical form writers must write
+([#56](https://github.com/nodelogicau/particulars/issues/56)). It is a
+clarification and takes no format version. No file is read differently and
+none that validated stops validating: readers accept the non-canonical forms
+the earlier text allowed and say so, and a malformed hash, which the earlier
+text reported as context drift forever, is read as no hash and reported
+against its object.
+
 A reference implementation,
 [`particulars-cli`](https://github.com/nodelogicau/particulars-cli), exists
 and its feedback shaped the current text.
@@ -2395,6 +2452,9 @@ the signed payload is built from the typed data model rather than from the
 parse ·
 [FIPS 180-4](https://csrc.nist.gov/pubs/fips/180-4/upd1/final) SHA-256 as the
 document hash writers write ·
+the [OCI image specification's](https://github.com/opencontainers/image-spec/blob/main/descriptor.md#digests)
+descriptor digest grammar for the document hash, with its `sha256` and
+`sha512` registrations ·
 [RFC 8615](https://www.rfc-editor.org/rfc/rfc8615) Well-Known URIs for the
 manifest path ·
 [RFC 8288](https://www.rfc-editor.org/rfc/rfc8288) Web Linking, and its
