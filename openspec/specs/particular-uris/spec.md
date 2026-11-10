@@ -14,7 +14,7 @@ The `uri` of a particular SHALL be globally unique. It is NOT required to be res
 - **THEN** the particular is valid with a non-resolvable URI
 
 ### Requirement: URI minting convention
-When `particular_define` is called without a `uri`, the implementation SHALL mint one as `<base-uri><slug>` if the workspace declares `workspace.base-uri`, and otherwise as `urn:dkf:<workspace-id>:<slug>`. `slug` SHALL be derived from the label by lower-casing, NFKD-folding and stripping combining marks, collapsing every run of characters outside `[a-z0-9]` to a single `-`, and trimming leading/trailing `-`. The `urn:dkf:` namespace is claimed by this specification for this purpose.
+When `particular_define` is called without a `uri`, the implementation SHALL mint one as `<base-uri><slug>` if the workspace declares `workspace.base-uri`, and otherwise as `urn:dkf:<workspace-id>:<slug>`. `slug` SHALL be derived from the label by lower-casing, NFKD-folding and stripping combining marks, collapsing every run of characters outside `[a-z0-9]` to a single `-`, and trimming leading/trailing `-`. The `urn:dkf:` namespace is claimed by this specification for this purpose. A slug SHALL NOT by itself decide that two labels name the same particular; that is decided as *A minted URI resolves only to the particular it was minted for* requires.
 
 #### Scenario: Minting with a base URI
 - **WHEN** the workspace has `base-uri: https://example.com/particulars/` and the label is `Project X`
@@ -25,7 +25,7 @@ When `particular_define` is called without a `uri`, the implementation SHALL min
 - **THEN** the minted URI is `urn:dkf:0191…:cafe-societe`
 
 #### Scenario: Same label across sessions
-- **WHEN** `particular_define` is called twice with labels that produce the same slug
+- **WHEN** `particular_define` is called without a `uri` with label `Project X`, and later called again without a `uri` with label `project x`
 - **THEN** both calls resolve to the same particular and no duplicate is created
 
 ### Requirement: URIs are immutable once published
@@ -49,3 +49,39 @@ The specification SHALL state that `urn:dkf:` is used as an unregistered URN nam
 #### Scenario: Registration changes nothing
 - **WHEN** the namespace is later registered
 - **THEN** every existing URN remains valid unchanged
+
+### Requirement: A minted URI resolves only to the particular it was minted for
+When `particular_define` is called without a `uri` and the minted URI already names a particular, directly or through a merge record, the call SHALL resolve to that particular only if the supplied `label` equals, under Unicode case folding, the `label` or one of the `aliases` of a particular in that particular's merge class. The supplied `aliases` SHALL NOT count towards the match. Otherwise the implementation SHALL refuse the call without creating or changing any file. The refusal SHALL name the existing particular's `id`, `uri` and `label`, and SHALL say that a different thing requires an explicit `uri` and that the same thing can be referred to by its URI or id.
+
+When such a call resolves to an existing particular, the implementation SHALL NOT change its `label`. It SHALL add each supplied alias the particular does not already carry and SHALL NOT remove any alias.
+
+When `particular_define` is called with a `uri`, this requirement SHALL NOT apply: the call is idempotent on that URI and MAY change the particular's `label` and `aliases`.
+
+#### Scenario: Same slug, different thing
+- **WHEN** a particular with label `C` and minted URI `…:c` exists, and `particular_define` is called without a `uri` with label `C#`
+- **THEN** the call is refused, the refusal names the particular labelled `C`, and no file is written
+
+#### Scenario: A label differing only in diacritics
+- **WHEN** a particular with label `Café` exists, and `particular_define` is called without a `uri` with label `Cafe`
+- **THEN** the call is refused, naming the particular labelled `Café`
+
+#### Scenario: Matching an existing alias
+- **WHEN** a particular with label `C` and alias `C-lang` exists, and `particular_define` is called without a `uri` with label `c-lang`
+- **THEN** the call resolves to that particular and its label remains `C`
+
+#### Scenario: Supplied aliases do not steer the match
+- **WHEN** a particular with label `C` exists, and `particular_define` is called without a `uri` with label `C#` and aliases `[C]`
+- **THEN** the call is refused and no file is written
+
+#### Scenario: Aliases are added, never removed
+- **WHEN** a particular with label `Project X` and alias `ProjectX` exists, and `particular_define` is called without a `uri` with label `project x` and aliases `[project_x]`
+- **THEN** the particular's label remains `Project X` and its aliases are `ProjectX` and `project_x`
+
+#### Scenario: Explicit URI beside a minted one
+- **WHEN** a particular with label `C` and minted URI `…:c` exists, and `particular_define` is called with label `C#` and `uri: https://www.wikidata.org/entity/Q2370`
+- **THEN** a second particular is created, and the particular labelled `C` is unchanged
+
+#### Scenario: Renaming through an explicit URI
+- **WHEN** a particular with label `C` and minted URI `…:c` exists, and `particular_define` is called with that URI and label `C (language)`
+- **THEN** the call resolves to that particular and MAY change its label to `C (language)`
+
