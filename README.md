@@ -523,6 +523,17 @@ combining marks, collapse every run of characters outside `[a-z0-9]` to a
 single `-`, and trim leading and trailing `-`. `Café Société` becomes
 `cafe-societe`.
 
+A label with no `[a-z0-9]` character after folding — `#`, `東京`, `Ωμέγα` —
+has an empty slug, and nothing is minted for it. The call is refused and
+nothing is written, and the refusal says an explicit `uri` is required:
+`東京` can take its Wikidata URI. Without the refusal, every such label
+would mint the same bare `base-uri` or `urn:dkf:<workspace-id>:`. A label
+with any character the slug keeps mints as usual: `C 東京` mints `…:c`.
+Falling back to the particular's id was rejected, because the same label
+would mint a new URI each session. Keeping letters from other scripts in the
+slug, as an IRI, was rejected for now, because it would change the minted
+URI of labels that mix scripts and slug today, such as `Café 東京`.
+
 The slug makes the URI readable; it does not decide what the label names.
 It discards everything outside `[a-z0-9]`, so labels for different things
 share one: `C`, `C#` and `C++` all slug to `c`. When the minted URI already
@@ -1831,7 +1842,7 @@ areas.
 
 | Tool | Description |
 |---|---|
-| `particular_define(uri?, label, aliases[])` | Create or update a particular — a thing in the world, not a document being read; what was read belongs in `claim_assert`'s `source.document`. Idempotent on an explicit URI, which may rename. Prefer an existing global URI that names an identity (a person's ORCID, a project's page), never reading matter. When `uri` is omitted one is minted from the label; if it already names a particular, the call resolves to it only when the label matches its label or an alias under case folding, never relabels, and is refused otherwise, naming the existing particular (see [Minting URIs](#minting-uris)). |
+| `particular_define(uri?, label, aliases[])` | Create or update a particular — a thing in the world, not a document being read; what was read belongs in `claim_assert`'s `source.document`. Idempotent on an explicit URI, which may rename. Prefer an existing global URI that names an identity (a person's ORCID, a project's page), never reading matter. When `uri` is omitted one is minted from the label, and a label that slugs to nothing is refused; if the minted URI already names a particular, the call resolves to it only when the label matches its label or an alias under case folding, never relabels, and is refused otherwise, naming the existing particular (see [Minting URIs](#minting-uris)). |
 | `particular_resolve(query)` | Find a particular by ID, URI, label, or alias. Returns null if no match; when a label or alias matches more than one particular, reports the candidates and resolves none. Matching is exact: it never uses a [semantic stage](#recall-by-query) and never returns a nearest candidate. |
 
 ### Claim Tools
@@ -2449,6 +2460,14 @@ used to merge two things silently are now refused. Particulars already
 conflated this way stay as they are, since the format cannot tell them from
 a deliberate alias; the remedy is to define the other thing with an
 explicit `uri`.
+
+`particular_define` without a `uri` now refuses a label that slugs to
+nothing, such as `#` or `東京`, and asks for an explicit `uri`
+([#63](https://github.com/nodelogicau/particulars/issues/63)). The earlier
+text minted the bare `base-uri` or `urn:dkf:<workspace-id>:` for every such
+label. It is a clarification and takes no format version: no minted URI
+changes, no file is read differently, and a particular already written with
+such a URI stays valid.
 
 A reference implementation,
 [`particulars-cli`](https://github.com/nodelogicau/particulars-cli), exists
