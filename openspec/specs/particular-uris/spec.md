@@ -82,8 +82,12 @@ When `particular_define` is called with a `uri`, this requirement SHALL NOT appl
 - **THEN** the call is refused, naming the particular labelled `Café`
 
 #### Scenario: Matching an existing alias
-- **WHEN** a particular with label `C` and alias `C-lang` exists, and `particular_define` is called without a `uri` with label `c-lang`
+- **WHEN** a particular with label `C`, alias `C-lang` and URI `…:c-lang` exists, and `particular_define` is called without a `uri` with label `c-lang`
 - **THEN** the call resolves to that particular and its label remains `C`
+
+#### Scenario: An alias does not redirect a minted URI
+- **WHEN** a particular with label `C`, alias `C-lang` and URI `…:c` exists, no particular is named by `…:c-lang`, and `particular_define` is called without a `uri` with label `C-lang`
+- **THEN** a new particular is created at `…:c-lang`, since the minted URI names no particular and this requirement does not apply
 
 #### Scenario: Supplied aliases do not steer the match
 - **WHEN** a particular with label `C` exists, and `particular_define` is called without a `uri` with label `C#` and aliases `[C]`
