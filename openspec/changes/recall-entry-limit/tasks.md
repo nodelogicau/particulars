@@ -14,5 +14,5 @@
 ## 3. Verify and follow up
 
 - [x] 3.1 Run `openspec validate recall-entry-limit --strict` and fix any findings
-- [ ] 3.2 Comment on #38 linking the change, and say that point 2 is still open
-- [ ] 3.3 Open a particulars-cli issue for `entry_limit`, the selection order, `omitted`, and `limit` on recall by particular as a deprecated synonym, citing `internal/query/recall.go:166`
+- [x] 3.2 Comment on #38 linking the change, and say that point 2 is still open
+- [x] 3.3 Open a particulars-cli issue for `entry_limit`, the selection order, `omitted`, and `limit` on recall by particular as a deprecated synonym, citing `internal/query/recall.go:166` (nodelogicau/particulars-cli#33)
