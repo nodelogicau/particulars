@@ -1863,7 +1863,7 @@ areas.
 
 | Tool | Description |
 |---|---|
-| `knowledge_recall(particular_id \| query, author?, scope, include_retracted, limit)` | Retrieve claims and syntheses about a particular or topic, or by `author` — an id, URI, label, or alias — returning objects asserted by or reported from that particular's merge class, each carrying `relations` — a set of `asserted` and/or `reported`, never empty. Combinable with the other filters. Returns in lineage order, identifying `current`. Operates across merged particulars. A `query` is first resolved to particulars and then recalled exactly as by particular, each result carrying `resolution` — `label`, `alias`, `lexical`, or `semantic` — saying how it was found (see [Recall by query](#recall-by-query)). `include_retracted` governs every [withdrawn](#conflict-semantics) object — retracted or content-redacted; with it, a redacted object is returned as its file stands, without the redacted fields. |
+| `knowledge_recall(particular_id \| query, author?, scope, include_retracted, limit, entry_limit?)` | Retrieve claims and syntheses about a particular or topic, or by `author` — an id, URI, label, or alias — returning objects asserted by or reported from that particular's merge class, each carrying `relations` — a set of `asserted` and/or `reported`, never empty. Combinable with the other filters. Returns in lineage order, identifying `current`. Operates across merged particulars. A `query` is first resolved to particulars and then recalled exactly as by particular, each result carrying `resolution` — `label`, `alias`, `lexical`, or `semantic` — saying how it was found (see [Recall by query](#recall-by-query)); there `limit` bounds the number of particulars. `entry_limit`, a positive integer, bounds the entries each particular returns: `current` is kept first, then unsynthesised entries, then (by query) matched ones, most recent first, and each particular reports how many the cap `omitted` (see [Bounding a recall](#bounding-a-recall)). Without it, nothing is capped. `include_retracted` governs every [withdrawn](#conflict-semantics) object — retracted or content-redacted; with it, a redacted object is returned as its file stands, without the redacted fields. |
 | `conflict_detect(particular_id \| claim_ids[])` | Return the structural `current` / `unsynthesised` / `stale` sets and a suggested synthesis priority (see [Conflict semantics](#conflict-semantics)). Judging actual contradiction is left to the harness. |
 | `lineage_trace(claim_id, depth)` | Traverse the provenance chain of any claim or synthesis — synthesis `inputs` by role, an inferred claim's `basis` labelled `basis`, and `superseded-by` successors — visiting each object once. Returns a structured tree. |
 
@@ -1972,7 +1972,10 @@ matching more distinct trimmed terms, then by ascending particular id — the
 lowest id of a merge class. Terms count against the particular's label, its
 aliases, and the objects in its *response*, never against an object the
 filters removed: a retracted or out-of-scope claim does not decide what the
-caller sees. That ranks `auth timeout` above `the` with no corpus statistic.
+caller sees. Terms count against the response as it stands before
+[`entry_limit`](#bounding-a-recall) applies, so capping a particular's
+entries never changes which particulars `limit` keeps. That ranks `auth
+timeout` above `the` with no corpus statistic.
 Within `semantic` the order is the implementation's, since it depends on a
 model by definition. When `limit` truncates, the first particulars in this
 order are kept.
@@ -2025,6 +2028,55 @@ is narrower is not sent, and stays resolvable through the baseline. A claim
 promoted to public becomes eligible on the next update. The configuration
 is not read from `dkf.yaml` — `dkf.yaml` travels with the workspace, and
 whether this machine may call that service is a property of the machine.
+
+### Bounding a recall
+
+A recall returns each particular's whole lineage, and recall by query's
+`limit` counts particulars, not entries. In a workspace where a few
+particulars hold most of the claims — the usual shape — a one-word query
+returns most of the workspace whatever `limit` is. `entry_limit` is the
+bound: a positive integer, accepted with `particular_id` or with `query`,
+capping the entries each particular contributes. By query, it is passed
+through to each particular's recall, so `limit` × `entry_limit` bounds the
+whole response.
+
+When a particular has more entries than the cap, after `author`, `scope` and
+`include_retracted` have done their work, the cap keeps them in this order,
+each at the first tier it belongs to, most recent first within a tier
+(descending `timestamp`, ties by descending id):
+
+1. `current`, if it is in the response;
+2. entries in the `unsynthesised` set;
+3. by query only, entries marked as matched;
+4. everything else.
+
+`current` comes first because recall answers "what is believed about this",
+and a cap that can cut the belief is worse than none. Unsynthesised entries
+come next because they are where [disagreement lives](#conflict-semantics):
+an agent shown the belief without what disputes it is misled, not informed.
+Matched entries come only after them, and only by query, because the query
+is the one sign of what the caller wants among entries already absorbed by a
+synthesis. Withdrawn entries, which `include_retracted` may admit, are in no
+`unsynthesised` set and so fall to the last tier. The kept entries come back
+in lineage order with `current` identified, exactly as without the cap: the
+caller sees a shorter lineage, not a reshuffled one.
+
+Each particular in a capped response carries `omitted`, the number of
+entries the cap removed — `0` when it removed none, so "nothing was cut" is
+distinguishable from "not reported". The rest is one
+`knowledge_recall(particular_id)` away. Entries the filters removed are not
+counted: a `public` caller learns nothing from `omitted` about how many
+`personal` claims exist. The cap also never decides which particulars a
+query returns. The [order](#recall-by-query) counts terms against each
+particular's response before the cap applies, so adding `entry_limit`
+changes what each particular shows and nothing else.
+
+Without `entry_limit`, nothing is capped, and an implementation does not
+choose a cap of its own: a default that differed between implementations
+would return different entries for the same call, which the fixed order
+above exists to prevent. A cap of `0`, a negative number, or a non-integer
+is an error rather than an empty response; a cap of `1` already returns the
+belief.
 
 ### What the server tells the model
 
@@ -2468,6 +2520,17 @@ text minted the bare `base-uri` or `urn:dkf:<workspace-id>:` for every such
 label. It is a clarification and takes no format version: no minted URI
 changes, no file is read differently, and a particular already written with
 such a URI stays valid.
+
+Recall now has a bound on entries: `entry_limit` caps what each particular
+returns, by particular or by query, keeping `current`, then unsynthesised
+entries, then matched ones, and reporting how many it `omitted` (see
+[Bounding a recall](#bounding-a-recall)). This closes the first of the two
+points open since v0.2 in
+[#38](https://github.com/nodelogicau/particulars/issues/38). It is tool
+behaviour and takes no format version: no file is read differently, and a
+call without `entry_limit` returns what it did before. The second point,
+that the fixed order favours common words and substring matching marks
+nearly everything, stays open.
 
 A reference implementation,
 [`particulars-cli`](https://github.com/nodelogicau/particulars-cli), exists
