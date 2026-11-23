@@ -42,11 +42,16 @@ the other.
 
 **Episodic** and **procedural** memory are outside the format. An event can
 be a particular and have claims made about it, but a log of what happened is
-not DKF's job. Neither is know-how, the habits and practised skills a person
-exercises rather than recalls. A harness's own know-how lives in skill files
-and prompts, and a workspace's [conventions document](#dkfmd) addresses an
-agent without constraining anything. Either memory could get a specification
-of its own. Why the family models memory as several kinds, and what each is
+not DKF's job. That log lives in [episodes](https://github.com/nodelogicau/episodes),
+the family's draft format for episodic memory. A claim may cite an episode as
+its source document: `document.ref` names the episode's id and
+`document.author` is the episode's standpoint, so *reported from* works across
+the two formats. The coupling runs one way. Episodes cites nothing in DKF, and
+no DKF validator resolves an episode reference. Nor is know-how DKF's job, the
+habits and practised skills a person exercises rather than recalls. A
+harness's own know-how lives in skill files and prompts, and a workspace's
+[conventions document](#dkfmd) addresses an agent without constraining
+anything. Procedural memory could get a specification of its own. Why the family models memory as several kinds, and what each is
 for, is argued in [Forgetting](https://github.com/nodelogicau/forgetting).
 
 ---
@@ -2621,10 +2626,14 @@ that accrues from being cited, behind citation weight.
 reference implementation, whose feedback shaped this text ·
 [particulars.fyi](https://particulars.fyi), a visual introduction ·
 [intentions](https://github.com/nodelogicau/intentions), the format that
-composes with this one for the prospective layer — see [Purpose](#purpose) ·
+composes with this one for the prospective layer — see [Purpose](#purpose),
+introduced at [intentions.fyi](https://intentions.fyi) ·
+[episodes](https://github.com/nodelogicau/episodes), the draft format for
+what happened, which a claim may cite as its source — see
+[Purpose](#purpose), introduced at [episodes.fyi](https://episodes.fyi) ·
 [Forgetting](https://github.com/nodelogicau/forgetting), the whitepaper on
 why the family models memory as several kinds, which belongs to neither
-format.
+format, at [forgetting.fyi](https://forgetting.fyi).
 
 ---
 
