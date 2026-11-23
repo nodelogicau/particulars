@@ -33,7 +33,12 @@ is gone can only be overwritten, not weighed. Because DKF keeps the source, a
 contradiction is evidence on both sides, and the dialectic below is how it is
 reconciled.
 
-It is the **retrospective** layer, what is known.
+DKF is complete on its own. It can be adopted without any other format, and
+nothing in it needs one to be written, read or validated (see
+[Conformance](#conformance)).
+
+It is also one of a family of formats that can be used together, each of
+which stands alone. DKF is the **retrospective** layer, what is known.
 [intentions](https://github.com/nodelogicau/intentions) is the
 **prospective** one, what a person means to do. The two are coupled only
 through the URIs of the particulars they share. A claim can cite an
@@ -42,17 +47,19 @@ the other.
 
 **Episodic** and **procedural** memory are outside the format. An event can
 be a particular and have claims made about it, but a log of what happened is
-not DKF's job. That log lives in [episodes](https://github.com/nodelogicau/episodes),
-the family's draft format for episodic memory. A claim may cite an episode as
-its source document: `document.ref` names the episode's id and
-`document.author` is the episode's standpoint, so *reported from* works across
-the two formats. The coupling runs one way. Episodes cites nothing in DKF, and
-no DKF validator resolves an episode reference. Nor is know-how DKF's job, the
-habits and practised skills a person exercises rather than recalls. A
-harness's own know-how lives in skill files and prompts, and a workspace's
-[conventions document](#dkfmd) addresses an agent without constraining
-anything. Procedural memory could get a specification of its own. Why the family models memory as several kinds, and what each is
-for, is argued in [Forgetting](https://github.com/nodelogicau/forgetting).
+not DKF's job. Such a log can be kept in
+[episodes](https://github.com/nodelogicau/episodes), the family's draft format
+for episodic memory. A claim may cite an episode as its source document:
+`document.ref` names the episode's id and `document.author` is the episode's
+standpoint, so *reported from* works across the two formats. The coupling
+runs one way. Episodes cites nothing in DKF, and no DKF validator resolves an
+episode reference. Nor is know-how DKF's job, the habits and practised skills
+a person exercises rather than recalls. A harness's own know-how lives in
+skill files and prompts, and a workspace's [conventions document](#dkfmd)
+addresses an agent without constraining anything. Procedural memory could get
+a specification of its own. Why the family models memory as several kinds,
+and what each is for, is argued in
+[Forgetting](https://github.com/nodelogicau/forgetting).
 
 ---
 
@@ -71,6 +78,35 @@ consuming the result inherits not just the conclusion but the reasoning chain.
 The approach is analogous to what OpenSpec does for code: rather than storing
 the current state of knowledge, DKF records the process by which knowledge
 was formed — making it portable, inspectable, and trustworthy across systems.
+
+---
+
+## Conformance
+
+The key words MUST, MUST NOT, SHOULD, SHOULD NOT and MAY, in capitals, are to
+be interpreted as described in [BCP 14](https://www.rfc-editor.org/info/bcp14)
+([RFC 2119](https://www.rfc-editor.org/rfc/rfc2119),
+[RFC 8174](https://www.rfc-editor.org/rfc/rfc8174)). Normative sections also
+state rules in plain prose ("must", "is refused", "never"); those bind in the
+same way.
+
+[Core Object Types](#core-object-types), [Object Model](#object-model),
+[Unbounded History, Bounded Work](#unbounded-history-bounded-work) and
+[File Layout](#file-layout) are normative, except any passage marked
+informative. [MCP Server Tools](#mcp-server-tools) is normative for an
+implementation that exposes a tool under a name it lists, and only for that
+implementation. [Public Discovery](#public-discovery) is normative for a
+publisher or consumer of public knowledge, and only for them.
+[Trust and Provenance](#trust-and-provenance) is normative where it defines
+the reserved `signature` field and its payload. Every other section is
+informative.
+
+This specification is complete on its own. A writer, reader or validator
+conforms by implementing the normative sections alone, with no intentions or
+episodes code, data or workspace. No field's value must be another format's
+identifier, and nothing here constrains how another format is written or
+used. Where the text names a sibling format, it is informative, or gives an
+example of a value the field already admits in its own terms.
 
 ---
 
