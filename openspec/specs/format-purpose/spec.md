@@ -2,7 +2,7 @@
 
 ## Purpose
 
-Defines what the specification states about its own purpose and scope: that DKF is semantic memory that keeps its provenance, with provenance as its distinguishing value and the dialectic as what provenance makes possible; that it is the retrospective layer beside intentions, coupled through shared particular URIs only; and that episodic and procedural memory are outside the format.
+Defines what the specification states about its own purpose and scope: that DKF is semantic memory that keeps its provenance, with provenance as its distinguishing value and the dialectic as what provenance makes possible; that it is complete on its own; that it is the retrospective layer beside intentions, coupled through shared particular URIs only; and that episodic and procedural memory are outside the format.
 ## Requirements
 ### Requirement: The specification states its purpose before its mechanism
 The specification SHALL include a *Purpose* section after *The Problem* and before *The Approach*, stating that DKF is semantic memory that keeps its provenance: beliefs about things in the world, each claim recording who asserted it, through which harness, from what, and how it is backed. The section SHALL identify provenance as the format's distinguishing value and SHALL present the dialectic as what provenance makes possible. The section SHALL be non-normative: it SHALL contain no requirement keyword, and no reader, writer, or validator behaviour SHALL depend on it.
@@ -20,7 +20,7 @@ The specification SHALL include a *Purpose* section after *The Problem* and befo
 - **THEN** none is found
 
 ### Requirement: The specification states its relationship to intentions
-The *Purpose* section SHALL state that DKF is the retrospective layer, what is known, and that intentions is the prospective layer, what a person means to do. It SHALL state that the two are coupled only through the URIs of the particulars they share, that either may cite the other informally, and that neither validates the other. The *References* entry for intentions SHALL point to *Purpose* rather than restate the relationship.
+The *Purpose* section SHALL state, before it describes any other format, that DKF is complete on its own and can be adopted without any other format. It SHALL then state that DKF is one of a family of formats each of which stands alone, that DKF is the retrospective layer, what is known, and that intentions is the prospective layer, what a person means to do. It SHALL state that the two are coupled only through the URIs of the particulars they share, that either may cite the other informally, and that neither validates the other. The *References* entry for intentions SHALL point to *Purpose* rather than restate the relationship.
 
 #### Scenario: The relationship in one place
 - **WHEN** a reader looks for how DKF relates to intentions
@@ -29,6 +29,10 @@ The *Purpose* section SHALL state that DKF is the retrospective layer, what is k
 #### Scenario: No resolved link implied
 - **WHEN** a reader reads *Purpose*'s account of the coupling
 - **THEN** nothing in it implies that a DKF validator resolves an intentions reference, or the reverse
+
+#### Scenario: Standing alone comes first
+- **WHEN** a reader reads *Purpose* from the top
+- **THEN** they learn that DKF is complete on its own before any other format is named
 
 ### Requirement: The specification states what is outside its scope
 The *Purpose* section SHALL state that episodic memory and procedural memory are outside the format: that an event may be a particular with claims made about it while a log of episodes is not the format's job, and that know-how, the habits and practised skills a person exercises rather than recalls, is not the format's job either. It SHALL name the episodes format as where a log of what happened lives, and SHALL state that a claim may cite an episode as its source document, with the episode's id as `document.ref` and the episode's standpoint as `document.author`. It SHALL state that the coupling runs one way: episodes cites nothing in DKF, and no DKF validator resolves an episode reference. It SHALL describe procedural memory as a person's know-how and SHALL NOT define it as how an agent does things. It SHALL state that a harness's own know-how lives in skill files and prompts, and that the conventions document addresses an agent without constraining anything. It SHALL leave open that procedural memory may be addressed by a separate specification. It SHALL point to the Forgetting whitepaper for why the family models memory as several kinds, and the *References* section SHALL list the whitepaper and the episodes format.
