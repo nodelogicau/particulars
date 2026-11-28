@@ -2422,6 +2422,133 @@ whose output is dominated by permanent unactionable lines has spent
 
 ---
 
+## Relation to Linked Data
+
+This section is informative.
+
+An ontology and this format answer different questions. An ontology fixes
+universals, the classes, properties and constraints, so that statements
+about individuals can be checked and reasoned over. DKF records particulars,
+what has been claimed about them, and who claimed it on what backing. It
+defines no classes and no predicates, and a claim's `content` is prose.
+Entity types and ontologies are implementation concerns (see [Design
+Principles](#design-principles)). The two meet at three points without
+either constraining the other: identity, export and import.
+
+### Shared identity
+
+A particular's `uri` is an IRI. Preferring an existing Wikidata, DBpedia,
+ORCID or DOI URI over a minted one means that a particular is already a node
+in the linked-data graph. A consumer holding a DKF feed and an RDF graph
+joins them on that URI, just as two DKF publishers are joined.
+
+A non-retracted [merge record](#merge-records) means what `owl:sameAs`
+means: two URIs denote one thing. But a merge is also an act, with a source,
+a timestamp and a retraction. An exporter that writes merges as `owl:sameAs`
+writes only the non-retracted ones, and it should keep the record's id so
+that the edge can be traced to the person who joined it.
+
+**A particular has no type.** Whether Project X is a microservices system,
+or Ben is an employee, is a claim. It can be contradicted, scoped and
+superseded like any other. A class written into the particular's file would
+be the one assertion about it with no source, scope or evidential, and it
+could be corrected only by rewriting the file. An implementation that wants
+`rdf:type` writes a claim and derives the type from it.
+
+### Exporting claims as RDF
+
+Export the claim, not the triple it seems to state. "Project X uses
+microservices" is not exported as `:projectX :architecture :Microservices`,
+because that triple says it without saying who said it. The claim becomes a
+resource, and its fields become statements about that resource:
+
+| DKF | RDF |
+|---|---|
+| particular `uri`, `label`, `aliases` | the IRI, `rdfs:label`, `skos:altLabel` |
+| claim or synthesis | a resource. A published object's IRI is the URL at which its feed serves it |
+| `subject` | `dcterms:subject`, to the particular's `uri` |
+| `content` | `rdf:value`, a literal |
+| `source.author` | `prov:wasAttributedTo` |
+| `source.harness`, `source.model` | `prov:wasGeneratedBy` an activity carrying the two strings |
+| `source.document` | `prov:wasDerivedFrom` its `ref`, with `quote` and `hash` as literals |
+| `timestamp` | `prov:generatedAtTime` |
+| `basis` | `prov:wasDerivedFrom`, once per id |
+| synthesis `inputs` | `prov:qualifiedDerivation`, with `role` as `prov:hadRole` |
+| `context.topics` | literals, or `skos:Concept` IRIs where the workspace maps them |
+| `evidential`, `confidence`, `method`, `unresolved`, `context.scope`, `retracted`, `redacted` | no standard term |
+
+The last row is the part of the format that makes it dialectical, and no
+existing vocabulary carries it. This specification publishes no RDF
+namespace. Until it does, an exporter states these fields in a namespace it
+controls, and that part of an export does not interoperate. An exporter that
+drops them instead produces a graph of assertions with no warrant, and
+dropping `retracted` or `redacted` turns a withdrawn claim back into a
+standing one.
+
+An export obeys the same rule as a feed. It serves only objects whose
+effective scope is `public`, because it is a second serialisation of the
+feed, not another way to publish. It is linked like any other description,
+with `describedby` and its own RDF media type (see [Linking to
+knowledge](#linking-to-knowledge)). A consumer takes a link as a manifest
+only when it is typed `application/dkf+yaml`, so links to a manifest and to
+an export can sit side by side.
+
+### Derived graphs
+
+A knowledge graph built from a workspace is a view of it, in the way that
+the index is a cache of the files: it is rebuilt from the files and never
+written back to them. An implementation that extracts triples from claim
+`content` puts each claim's triples in a named graph whose name is the
+claim's IRI, so that every derived statement can be traced to the claim it
+came from.
+
+Which claims to draw from is a choice the view should state. A graph built
+from each particular's `current` synthesis is a snapshot of reconciled
+belief. A graph built from every non-withdrawn claim will hold triples that
+disagree, and an OWL reasoner run over it will call it inconsistent. That
+inconsistency is the conflict [Conflict semantics](#conflict-semantics)
+already reports, found by different means. It is evidence for a synthesis,
+not a defect to repair in the graph.
+
+Anything a derived graph concludes that the workspace does not already
+hold, such as an entailment or a type, is new knowledge only once it is
+written as a claim. That claim is `inferred`, with a `basis` naming the
+claims it came from, and the harness or reasoner as its source.
+
+### Importing from linked data
+
+A statement read from a linked-data source is recorded as an `observed`
+claim. Its `source.document.ref` is the entity or statement it was read
+from, and its `source.document.author` is the publisher, where that
+publisher is a particular. A Wikidata statement that disagrees with a local
+claim is then `unsynthesised` beside it, and `conflict_detect` reports it.
+Neither side overwrites the other.
+
+An ontology's constraints can also inform conflict detection. Whether two
+claims contradict is the reasoning harness's judgement (see [Conflict
+semantics](#conflict-semantics)), and checking claims that carry structured
+statements against an OWL or SHACL shape is one way to make that judgement.
+It is deterministic where the structure exists. It stays an implementation's
+tool, and it never decides validity.
+
+### Not adopted
+
+**RDF as the file format.** Writing objects as JSON-LD would make every
+claim's meaning depend on a context document fetched from elsewhere. A file
+that reads as plain YAML with no network access is what lets this
+specification [stand alone](#conformance), and what makes the
+[signed payload](#trust-and-provenance) a canonicalisation of one document
+rather than of a graph.
+
+**Typed predicates in claims.** A predicate vocabulary must be agreed before
+anything can be written, and the category is usually the part of a belief
+that gets contested. Agents write prose, and the reasoning that reconciles
+claims is done over prose. An implementation may attach structured
+statements to a claim in an extension field. Readers ignore fields they do
+not recognise, so this costs other readers nothing, and it is never required.
+
+---
+
 ## Design Principles
 
 **Contradiction is signal, not error.** The format is built around preserving
@@ -2439,7 +2566,8 @@ is no longer readable.
 particular, claim, synthesis — are the complete core, plus records —
 retraction, merge, publish — that are events about objects rather than
 knowledge. Entity types, ontologies, topic taxonomies, and trust hierarchies
-are implementation concerns.
+are implementation concerns (see [Relation to Linked
+Data](#relation-to-linked-data)).
 
 **Backward compatibility by design.** A consumer that ignores synthesis-
 specific fields gets a valid claim. A consumer that ignores `/merges/` still
@@ -2630,6 +2758,17 @@ whose template it carries.
 identity the reserved signature would bind ·
 a GitHub profile URL. These are examples of a URI that identifies a person,
 not requirements: any globally unique URI serves.
+
+**Vocabularies an export maps to.** Not sources of the format; the terms
+[Relation to Linked Data](#relation-to-linked-data) maps its fields onto ·
+[RDF 1.1](https://www.w3.org/TR/rdf11-concepts/) and its named graphs ·
+[PROV-O](https://www.w3.org/TR/prov-o/) for `source`, `basis` and `inputs` ·
+[SKOS](https://www.w3.org/TR/skos-reference/) for aliases and topics ·
+[OWL 2](https://www.w3.org/TR/owl2-overview/) `owl:sameAs` for merges ·
+[DCMI Metadata Terms](https://www.dublincore.org/specifications/dublin-core/dcmi-terms/)
+`dcterms:subject` ·
+[JSON-LD 1.1](https://www.w3.org/TR/json-ld11/), the serialisation not
+adopted for object files.
 
 **Protocol.**
 [Model Context Protocol](https://modelcontextprotocol.io), against which the
